@@ -1,0 +1,29 @@
+{
+  "name": "lacs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LACS thesis monorepo - XIAO ESP32-C3 sensor node, API, dashboard and Android app",
+  "workspaces": [
+    "packages/*",
+    "apps/api",
+    "apps/web",
+    "tools/*"
+  ],
+  "scripts": {
+    "build:contracts": "npm run build --workspace @lacs/contracts",
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @lacs/api",
+    "dev:web": "npm run dev --workspace @lacs/web",
+    "bridge": "npm run start --workspace @lacs/serial-bridge",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
