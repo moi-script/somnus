@@ -1,0 +1,9 @@
+node_modules/
+.env
+.next/
+out/
+dist/
+*.log
+apps/mobile/android/
+apps/web/public/downloads/*.apk
+*.keystore
