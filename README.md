@@ -74,10 +74,27 @@ exclusively.
 npm run apk              # debug build
 ```
 
-The APK lands at
-`apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`. Copy it to
-`apps/web/public/downloads/lacs.apk` to serve it from the `/download` page.
-It is gitignored - 25 MB of build output does not belong in the repo.
+`npm run apk` also publishes it to `apps/web/public/downloads/lacs.apk`, so
+the `/download` page serves it. The APK is gitignored - 25 MB of build output
+does not belong in the repo.
+
+The build strips that file before packaging and puts it back afterwards.
+Capacitor copies all of `public/` into the app's assets, so leaving it there
+makes the app ship a copy of the previous APK inside itself, growing by
+~25 MB every build.
+
+**The API URL is compiled in**, so an APK only works against the address it
+was built for. `NEXT_PUBLIC_API_URL` must be your machine's LAN address
+before you build - `localhost` on a phone is the phone. The build prints the
+baked URL so this cannot fail silently:
+
+```
+[web] API URL baked into this build: http://192.168.1.33:4000
+```
+
+`next.config.mjs` reads the root `.env` to get it. Next only auto-loads a
+`.env` from its own directory, so without that the root value is ignored and
+the bundle silently keeps its default.
 
 Check what you actually shipped before handing the file to anyone:
 
