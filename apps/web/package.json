@@ -9,6 +9,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@capacitor-community/bluetooth-le": "^7.3.2",
+    "@capacitor-community/sqlite": "^7.0.3",
+    "@capacitor/core": "^7.6.9",
+    "@capacitor/network": "^7.0.4",
     "@lacs/contracts": "*",
     "next": "^15.1.4",
     "react": "^19.0.0",

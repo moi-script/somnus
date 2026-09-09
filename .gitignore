@@ -7,3 +7,9 @@ dist/
 apps/mobile/android/
 apps/web/public/downloads/*.apk
 *.keystore
+apps/mobile/android/local.properties
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/app/src/main/assets/public/
+apps/mobile/android/capacitor-cordova-android-plugins/

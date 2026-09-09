@@ -1,16 +1,29 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { setToken } from '@/lib/api';
+import { isNative } from '@/lib/platform';
 
-const LINKS = [
+const WEB_LINKS = [
   { href: '/devices/', label: 'Devices' },
   { href: '/download/', label: 'Get the app' },
 ];
 
+// Inside the app, pairing replaces the download link - you already have it.
+const NATIVE_LINKS = [
+  { href: '/devices/', label: 'Devices' },
+  { href: '/node/', label: 'Pair a node' },
+];
+
 export function Nav() {
   const pathname = usePathname();
+  const [links, setLinks] = useState(WEB_LINKS);
+
+  useEffect(() => {
+    if (isNative()) setLinks(NATIVE_LINKS);
+  }, []);
 
   return (
     <nav className="mb-8 flex items-center justify-between border-b border-rule pb-4">
@@ -18,7 +31,7 @@ export function Nav() {
         <Link href="/devices/" className="font-medium tracking-tight">
           LACS
         </Link>
-        {LINKS.map((link) => {
+        {links.map((link) => {
           const active = pathname?.startsWith(link.href);
           return (
             <Link
