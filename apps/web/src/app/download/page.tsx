@@ -12,7 +12,7 @@ import { Nav } from '@/components/Nav';
 const STEPS = [
   {
     title: 'Download the file',
-    body: 'Your browser will ask you to confirm. The file is about 4 MB and lands in your Downloads folder.',
+    body: 'Your browser will ask you to confirm, then the file lands in your Downloads folder.',
   },
   {
     title: 'Open it and allow this source',

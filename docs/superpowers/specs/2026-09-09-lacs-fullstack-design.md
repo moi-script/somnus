@@ -1,7 +1,7 @@
 # LACS fullstack — design
 
 Date: 2026-09-09
-Status: awaiting review
+Status: approved, built (steps 1-7)
 Firmware counterpart: `C:\Users\moises\Documents\Arduino\lacs_node` (payload `v:1`)
 
 ## 1. Goal

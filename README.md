@@ -77,6 +77,20 @@ npm run apk              # debug build
 The APK lands at
 `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`. Copy it to
 `apps/web/public/downloads/lacs.apk` to serve it from the `/download` page.
+It is gitignored - 25 MB of build output does not belong in the repo.
+
+Check what you actually shipped before handing the file to anyone:
+
+```bash
+"$LOCALAPPDATA/Android/Sdk/build-tools/35.0.0/aapt2.exe" dump badging   apps/web/public/downloads/lacs.apk | grep uses-permission
+```
+
+Dependencies inject permissions of their own. The SQLite plugin declared
+biometric permissions for an encryption mode this app switches off, and the
+BLE plugin declared coarse location uncapped; both are stripped in
+`AndroidManifest.xml` with `tools:node`. On a sideloaded app that Android
+already warns about, an unexplained fingerprint permission is what makes
+someone abandon the install.
 
 `NEXT_PUBLIC_API_URL` is baked in at build time. For a phone it must be your
 machine's LAN address or a public URL — `localhost` on a phone is the phone.
@@ -105,7 +119,10 @@ and that one account cannot see another's device.
   and rejoin at the newline.
 - **JDK 21 is pinned** in `apps/mobile/android/gradle.properties`. Android
   Studio bundles JBR 25, which the Android Gradle Plugin rejects. The machine's
-  `JAVA_HOME` is deliberately left alone.
+  `JAVA_HOME` is deliberately left alone. Use forward slashes in that path -
+  Java's properties parser eats Windows backslashes.
+- **Gradle heap is capped** at 1.5 GB in the same file. An uncapped build
+  alongside the dev servers exhausted memory on this machine.
 
 ## Not built yet
 
