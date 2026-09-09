@@ -4,7 +4,7 @@
   "private": true,
   "description": "Capacitor shell that packages the LACS dashboard as a sideloadable Android APK.",
   "scripts": {
-    "sync": "node ../../scripts/clean-apk-assets.mjs && npm run build --workspace @lacs/web && cap sync android",
+    "sync": "node ../../scripts/clean-apk-assets.mjs && node ../../scripts/write-network-config.mjs && npm run build --workspace @lacs/web && cap sync android",
     "open": "cap open android",
     "apk:debug": "npm run sync && cd android && .\\gradlew.bat assembleDebug",
     "apk:release": "npm run sync && cd android && .\\gradlew.bat assembleRelease"

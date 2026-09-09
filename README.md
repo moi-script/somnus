@@ -110,6 +110,22 @@ BLE plugin declared coarse location uncapped; both are stripped in
 already warns about, an unexplained fingerprint permission is what makes
 someone abandon the install.
 
+### Android blocks plain HTTP
+
+Apps targeting SDK 28+ refuse cleartext traffic, and this one targets 35. A
+LAN API on `http://` is rejected by the platform before the request leaves the
+phone, and the app can only report "cannot reach the server" - identical to
+the server being down.
+
+`scripts/write-network-config.mjs` generates
+`res/xml/network_security_config.xml` from `NEXT_PUBLIC_API_URL` on every
+build: cleartext stays blocked by default and is permitted only for that one
+host, so the exception cannot drift from the URL in the bundle. An `https`
+API produces no exception at all.
+
+`allowMixedContent` in `capacitor.config.ts` does not cover this - it governs
+WebView mixed content, not the platform policy.
+
 ## Tests
 
 ```bash
