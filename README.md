@@ -110,9 +110,6 @@ BLE plugin declared coarse location uncapped; both are stripped in
 already warns about, an unexplained fingerprint permission is what makes
 someone abandon the install.
 
-`NEXT_PUBLIC_API_URL` is baked in at build time. For a phone it must be your
-machine's LAN address or a public URL — `localhost` on a phone is the phone.
-
 ## Tests
 
 ```bash
