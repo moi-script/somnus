@@ -216,7 +216,7 @@ export default function MePage() {
 
           <a
             className="row border-t border-line"
-            href="mailto:nugalmoises62@gmail.com?subject=LACS%20feedback"
+            href="mailto:nugalmoises62@gmail.com?subject=Somnus%20feedback"
           >
             <MailIcon className="h-5 w-5 text-muted" />
             <span className="flex-1 font-medium">Send feedback</span>
@@ -232,7 +232,7 @@ export default function MePage() {
           {panel === 'about' && (
             <div className="border-t border-line bg-canvas/50 px-5 py-5 text-sm text-muted">
               <p>
-                LACS reads a pulse sensor, a skin response sensor and an
+                Somnus reads a pulse sensor, a skin response sensor and an
                 accelerometer from a small board worn on the body, and keeps the
                 readings on your phone until they can be uploaded.
               </p>

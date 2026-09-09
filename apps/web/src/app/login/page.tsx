@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto mt-12 max-w-sm sm:mt-24">
-      <h1 className="text-2xl font-medium tracking-tight">LACS</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Somnus</h1>
       <p className="mt-2 text-muted">
         Pulse, skin conductance and motion from a wearable sensor node.
       </p>

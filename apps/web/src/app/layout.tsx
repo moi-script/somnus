@@ -11,7 +11,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: 'LACS',
+  title: 'Somnus',
   description: 'Heart rate, skin response and movement from a wearable sensor band.',
 };
 

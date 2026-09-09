@@ -41,7 +41,7 @@ export default function DownloadPage() {
           Wi-Fi, it keeps recording and syncs later.
         </p>
 
-        <a href="/downloads/lacs.apk" download className="btn-primary mt-6 inline-block">
+        <a href="/downloads/somnus.apk" download className="btn-primary mt-6 inline-block">
           Download the app
         </a>
 

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'local.lacs.app',
-  appName: 'LACS',
+  appId: 'local.somnus.app',
+  appName: 'Somnus',
   // The same static export the website serves. One UI, two shells.
   webDir: '../web/out',
   android: {

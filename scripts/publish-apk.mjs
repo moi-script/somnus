@@ -28,7 +28,7 @@ for (const dir of [
   path.resolve(here, '../apps/web/out/downloads'),
 ]) {
   fs.mkdirSync(dir, { recursive: true });
-  fs.copyFileSync(built, path.join(dir, 'lacs.apk'));
+  fs.copyFileSync(built, path.join(dir, 'somnus.apk'));
 }
 
-console.log(`[apk] published lacs.apk (${size} MB) - served at /download`);
+console.log(`[apk] published somnus.apk (${size} MB) - served at /download`);
