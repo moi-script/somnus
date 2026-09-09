@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Frame } from '@lacs/contracts';
-import { Nav } from '@/components/Nav';
+import { SubPage } from '@/components/SubPage';
 import { isNative } from '@/lib/platform';
 import type { BleStatus, Connection } from '@/lib/native/ble';
 import type { SyncStats } from '@/lib/native/sync';
@@ -46,7 +46,7 @@ export default function NodePage() {
       if (!stored) {
         setStatus({
           state: 'error',
-          message: 'Add the ingest token first. You get it when you add the node on the Devices screen.',
+          message: 'Add the ingest token first. You get it when you add the node on the Device tab.',
         });
         return;
       }
@@ -101,32 +101,28 @@ export default function NodePage() {
 
   if (!native) {
     return (
-      <>
-        <Nav />
-        <main className="max-w-prose">
-          <h1 className="text-2xl font-medium tracking-tight">Pair a node</h1>
+      <SubPage title="Connect over Bluetooth">
+        <div className="max-w-prose">
           <p className="mt-3 text-muted">
-            Bluetooth pairing only works in the Android app. In a browser, watch
-            an already-connected node on the{' '}
-            <Link href="/devices/" className="text-motion">
-              Devices
+            Bluetooth pairing only works in the Android app. In a browser you
+            can watch a band that is already sending on the{' '}
+            <Link href="/device/" className="text-motion">
+              Device
             </Link>{' '}
-            screen, or{' '}
+            tab, or{' '}
             <Link href="/download/" className="text-motion">
               install the app
             </Link>
             .
           </p>
-        </main>
-      </>
+        </div>
+      </SubPage>
     );
   }
 
   return (
-    <>
-      <Nav />
-      <main className="max-w-prose">
-        <h1 className="text-2xl font-medium tracking-tight">Pair a node</h1>
+    <SubPage title="Connect over Bluetooth">
+      <div className="max-w-prose">
 
         {status.state === 'idle' && (
           <>
@@ -145,7 +141,7 @@ export default function NodePage() {
               onChange={(e) => setTokenValue(e.target.value)}
             />
             <p className="mt-1 text-sm text-muted">
-              Shown once when you add the node on the Devices screen.
+              Shown once when you add the node on the Device tab.
             </p>
             <button type="button" className="btn-primary mt-4" onClick={() => void pair()}>
               Find my node
@@ -162,7 +158,7 @@ export default function NodePage() {
           <section className="mt-6">
             <p className="text-motion">Connected to {status.name}</p>
 
-            <dl className="mt-6 divide-y divide-rule border-y border-rule">
+            <dl className="mt-6 divide-y divide-line border-y border-line">
               <div className="flex justify-between py-3">
                 <dt className="text-muted">Waiting to upload</dt>
                 <dd className="tabular font-mono">{stats?.buffered ?? 0}</dd>
@@ -180,7 +176,7 @@ export default function NodePage() {
             </dl>
 
             {stats?.lastError && (
-              <p className="mt-4 rounded border border-skin/40 bg-skin/5 px-3 py-2 text-sm text-skin">
+              <p className="mt-4 rounded-2xl border border-skin/40 bg-skin/5 px-3 py-2 text-sm text-skin">
                 {stats.lastError}
               </p>
             )}
@@ -198,7 +194,7 @@ export default function NodePage() {
 
         {status.state === 'error' && (
           <>
-            <p className="mt-4 rounded border border-alarm/40 bg-alarm/10 px-3 py-2 text-sm text-alarm">
+            <p className="mt-4 rounded-2xl border border-alarm/30 bg-alarm/10 px-3 py-2 text-sm text-alarm">
               {status.message}
             </p>
             <button type="button" className="btn mt-4" onClick={() => setStatus({ state: 'idle' })}>
@@ -206,7 +202,7 @@ export default function NodePage() {
             </button>
           </>
         )}
-      </main>
-    </>
+      </div>
+    </SubPage>
   );
 }

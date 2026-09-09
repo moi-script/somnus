@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Nav } from '@/components/Nav';
+import { SubPage } from '@/components/SubPage';
 
 /**
  * The install is genuinely a sequence, and Android genuinely interrupts it
@@ -32,11 +32,9 @@ export default function DownloadPage() {
   }, []);
 
   return (
-    <>
-      <Nav />
-      <main className="max-w-2xl">
-        <h1 className="text-2xl font-medium tracking-tight">Get the Android app</h1>
-        <p className="mt-3 text-muted">
+    <SubPage title="Get the Android app">
+      <div className="max-w-2xl">
+        <p className="text-muted">
           The phone is the link between the sensor node and the server. It
           connects to the node over Bluetooth, keeps a local copy of every
           reading, and uploads them whenever it has a network. Out of range of
@@ -71,7 +69,7 @@ export default function DownloadPage() {
           </ol>
         </section>
 
-        <section className="mt-10 border-t border-rule pt-6">
+        <section className="mt-10 border-t border-line pt-6">
           <h2 className="font-medium">Why the warning appears</h2>
           <p className="mt-2 text-sm text-muted">
             Android shows it for every app installed from outside the Play
@@ -80,7 +78,7 @@ export default function DownloadPage() {
           </p>
         </section>
 
-        <section className="mt-8 border-t border-rule pt-6">
+        <section className="mt-8 border-t border-line pt-6">
           <h2 className="font-medium">Permissions the app asks for</h2>
           <dl className="mt-3 space-y-3 text-sm">
             <div>
@@ -100,7 +98,7 @@ export default function DownloadPage() {
             </div>
           </dl>
         </section>
-      </main>
-    </>
+      </div>
+    </SubPage>
   );
 }

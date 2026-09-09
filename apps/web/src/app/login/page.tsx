@@ -21,7 +21,7 @@ export default function LoginPage() {
         ? await api.login(email, password)
         : await api.register(email, password);
       setToken(res.token);
-      router.push('/devices/');
+      router.push('/health/');
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -71,7 +71,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="rounded border border-alarm/40 bg-alarm/10 px-3 py-2 text-sm text-alarm">
+          <p className="rounded-2xl border border-alarm/30 bg-alarm/10 px-3 py-2 text-sm text-alarm">
             {error}
           </p>
         )}

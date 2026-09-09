@@ -1,31 +1,39 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Instrument palette. Channel hues are identity, not decoration: pulse is
- * always coral, skin always amber, motion always teal - in traces, badges,
- * event rows and readouts alike, so a colour alone tells you the channel.
+ * Colours come from CSS variables so the theme can be swapped at runtime.
+ * Channels rather than hex, so Tailwind's alpha modifiers (bg-card/60) still
+ * work.
  */
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ground: '#06121A',
-        panel: '#0C1D26',
-        rule: '#17323D',
-        ink: '#DCEAF0',
-        muted: '#7D9AA6',
-        pulse: '#FF5470',
-        skin: '#FFC24B',
-        motion: '#4FD6C8',
-        alarm: '#FF3B3B',
+        canvas: token('canvas'),
+        card: token('card'),
+        ink: token('ink'),
+        muted: token('muted'),
+        line: token('line'),
+        heart: token('heart'),
+        skin: token('skin'),
+        motion: token('motion'),
+        sleep: token('sleep'),
+        oxygen: token('oxygen'),
+        alarm: token('alarm'),
       },
       fontFamily: {
-        sans: ['var(--font-plex-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-plex-mono)', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-manrope)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        DEFAULT: '3px',
+        card: '24px',
+        pill: '999px',
+      },
+      boxShadow: {
+        soft: '0 2px 16px rgb(var(--shadow) / 0.06)',
+        lift: '0 8px 28px rgb(var(--shadow) / 0.10)',
       },
     },
   },

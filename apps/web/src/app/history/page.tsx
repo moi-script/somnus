@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { Reading, StoredEvent } from '@lacs/contracts';
 import { api } from '@/lib/api';
-import { Nav } from '@/components/Nav';
+import { SubPage } from '@/components/SubPage';
 import { Trace } from '@/components/Trace';
 import { EventList } from '@/components/EventList';
 
@@ -67,24 +67,21 @@ function HistoryView() {
   if (!deviceId) {
     return (
       <p className="text-muted">
-        No device selected. <Link href="/devices/" className="text-motion">Pick one</Link>.
+        No device selected. <Link href="/device/" className="text-motion">Pick one</Link>.
       </p>
     );
   }
 
   const channels = [
-    { name: 'Pulse', unit: 'bpm', color: '#FF5470', data: series.bpm, precision: 0, minSpan: 12 },
-    { name: 'Skin', unit: 'counts', color: '#FFC24B', data: series.gsr, precision: 0, minSpan: 150 },
-    { name: 'Motion', unit: 'g', color: '#4FD6C8', data: series.motion, precision: 2, minSpan: 0.4 },
+    { name: 'Pulse', unit: 'bpm', color: '#FF6B8A', data: series.bpm, precision: 0, minSpan: 12 },
+    { name: 'Skin', unit: 'counts', color: '#F5A524', data: series.gsr, precision: 0, minSpan: 150 },
+    { name: 'Motion', unit: 'g', color: '#2ED3C6', data: series.motion, precision: 2, minSpan: 0.4 },
   ];
 
   return (
     <main>
-      <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-4">
-        <div>
-          <h1 className="text-xl font-medium">History</h1>
-          <p className="mt-1 font-mono text-sm text-muted">{deviceId}</p>
-        </div>
+      <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-line pb-4">
+        <p className="text-sm text-muted">{deviceId}</p>
         <div className="flex gap-2">
           {RANGES.map((range) => (
             <button
@@ -92,8 +89,8 @@ function HistoryView() {
               type="button"
               className={
                 range.limit === limit
-                  ? 'rounded border border-motion px-3 py-1 text-sm text-motion'
-                  : 'rounded border border-rule px-3 py-1 text-sm text-muted hover:text-ink'
+                  ? 'rounded-pill border border-motion px-3 py-1 text-sm text-motion'
+                  : 'rounded border border-line px-3 py-1 text-sm text-muted hover:text-ink'
               }
               onClick={() => setLimit(range.limit)}
             >
@@ -122,13 +119,13 @@ function HistoryView() {
             {channels.map((channel) => {
               const stats = summarise(channel.data);
               return (
-                <section key={channel.name} className="border-b border-rule py-5">
+                <section key={channel.name} className="border-b border-line py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
                     <h2 className="font-medium" style={{ color: channel.color }}>
                       {channel.name}
                     </h2>
                     {stats && (
-                      <p className="tabular font-mono text-sm text-muted">
+                      <p className="tabular text-sm text-muted">
                         min {stats.min.toFixed(channel.precision)} · mean{' '}
                         {stats.mean.toFixed(channel.precision)} · max{' '}
                         {stats.max.toFixed(channel.precision)} {channel.unit}
@@ -150,7 +147,7 @@ function HistoryView() {
           </div>
 
           <section className="mt-8">
-            <h2 className="border-b border-rule pb-2 font-medium">Events</h2>
+            <h2 className="border-b border-line pb-2 font-medium">Events</h2>
             <EventList
               events={events.map((e) => ({
                 kind: e.kind,
@@ -168,11 +165,10 @@ function HistoryView() {
 
 export default function HistoryPage() {
   return (
-    <>
-      <Nav />
+    <SubPage title="History" subtitle="Everything the band has recorded">
       <Suspense fallback={<p className="text-muted">Loading</p>}>
         <HistoryView />
       </Suspense>
-    </>
+    </SubPage>
   );
 }

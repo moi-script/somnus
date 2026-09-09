@@ -3,50 +3,86 @@
 @tailwind utilities;
 
 @layer base {
-  html {
+  /* Soft, the default. Cool porcelain rather than warm cream. */
+  :root {
+    --canvas: 244 246 251;
+    --card: 255 255 255;
+    --ink: 23 32 46;
+    --muted: 120 132 155;
+    --line: 231 235 243;
+    --shadow: 23 32 46;
+
+    --heart: 255 107 138;
+    --skin: 245 165 36;
+    --motion: 46 211 198;
+    --sleep: 124 108 240;
+    --oxygen: 76 154 255;
+    --alarm: 244 82 92;
+
+    color-scheme: light;
+  }
+
+  /* Night. Same hues, lifted for legibility on a dark ground: the pastels
+     used on white turn muddy once the background stops reflecting light. */
+  :root[data-theme='dark'] {
+    --canvas: 15 20 30;
+    --card: 23 30 43;
+    --ink: 233 238 246;
+    --muted: 138 150 171;
+    --line: 38 48 66;
+    --shadow: 0 0 0;
+
+    --heart: 255 129 156;
+    --skin: 255 187 77;
+    --motion: 78 226 213;
+    --sleep: 152 138 250;
+    --oxygen: 116 176 255;
+    --alarm: 255 116 125;
+
     color-scheme: dark;
   }
 
   body {
-    @apply bg-ground text-ink font-sans antialiased;
-    /* Faint instrument grid. Sits behind everything and never competes with
-       a trace, which is the only thing on screen allowed to be bright. */
-    background-image:
-      linear-gradient(to right, rgba(23, 50, 61, 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(23, 50, 61, 0.35) 1px, transparent 1px);
-    background-size: 32px 32px;
+    @apply bg-canvas text-ink font-sans antialiased;
   }
 
-  /* Live values must not shift horizontally as digits change. */
+  /* Live values must not shift sideways as digits change. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    @apply outline outline-2 outline-offset-2 outline-motion;
+    @apply outline-none ring-2 ring-motion ring-offset-2 ring-offset-canvas;
   }
 }
 
 @layer components {
+  .card {
+    @apply rounded-card bg-card shadow-soft;
+  }
+
   .field {
-    @apply w-full rounded border border-rule bg-panel px-3 py-2 text-ink
-           placeholder:text-muted/60 focus:border-motion focus:outline-none;
+    @apply w-full rounded-2xl border border-line bg-card px-4 py-3 text-ink
+           placeholder:text-muted/70 focus:border-motion focus:outline-none;
   }
 
   .btn {
-    @apply rounded border border-rule bg-panel px-4 py-2 font-medium text-ink
-           transition-colors hover:border-motion hover:text-motion
-           disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-rule
-           disabled:hover:text-ink;
+    @apply rounded-pill border border-line bg-card px-5 py-2.5 font-medium
+           text-ink transition-shadow hover:shadow-soft
+           disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply rounded bg-motion px-4 py-2 font-medium text-ground
+    @apply rounded-pill bg-ink px-5 py-3 font-semibold text-canvas
            transition-opacity hover:opacity-90 disabled:opacity-40;
+  }
+
+  .row {
+    @apply flex w-full items-center gap-4 px-5 py-4 text-left transition-colors
+           hover:bg-canvas/70;
   }
 }
 
-/* The trace advances because data arrived. Nothing else animates. */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
