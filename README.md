@@ -82,7 +82,8 @@ It is gitignored - 25 MB of build output does not belong in the repo.
 Check what you actually shipped before handing the file to anyone:
 
 ```bash
-"$LOCALAPPDATA/Android/Sdk/build-tools/35.0.0/aapt2.exe" dump badging   apps/web/public/downloads/lacs.apk | grep uses-permission
+AAPT="$LOCALAPPDATA/Android/Sdk/build-tools/35.0.0/aapt2.exe"
+"$AAPT" dump badging apps/web/public/downloads/lacs.apk | grep uses-permission
 ```
 
 Dependencies inject permissions of their own. The SQLite plugin declared
