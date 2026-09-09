@@ -43,6 +43,8 @@ const readingSchema = new Schema(
     ppg: { type: Schema.Types.Mixed, required: true },
     imu: { type: Schema.Types.Mixed, required: true },
     gsr: { type: Schema.Types.Mixed, required: true },
+    /** Absent on v1 frames, which carried no step counter. */
+    steps: { type: Schema.Types.Mixed, default: null },
     motor: { type: Schema.Types.Mixed, required: true },
     flags: { type: [String], default: [] },
   },

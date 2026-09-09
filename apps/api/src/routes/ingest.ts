@@ -122,6 +122,7 @@ ingestRouter.post(
             ppg: frame.ppg,
             imu: frame.imu,
             gsr: frame.gsr,
+            steps: frame.steps ?? null,
             motor: frame.motor,
             flags: frame.flags,
           });

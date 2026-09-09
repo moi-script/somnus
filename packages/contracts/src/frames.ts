@@ -8,7 +8,17 @@ import { z } from 'zod';
  * changes, PAYLOAD_VERSION goes up, and TypeScript points at every consumer
  * that needs attention.
  */
-export const PAYLOAD_VERSION = 1;
+export const PAYLOAD_VERSION = 2;
+
+/**
+ * Versions still accepted on the wire.
+ *
+ * Fields added in v2 are optional, so a v1 device and a v2 device can report
+ * side by side and a phone holding frames buffered before an update can still
+ * flush them. Anything absent shows in the app as not measured, which is the
+ * truth.
+ */
+export const SUPPORTED_PAYLOAD_VERSIONS = [1, 2] as const;
 
 /** Fires when a local rule on the device trips. */
 export const flagSchema = z.enum(['fall', 'gsr_spike', 'no_finger']);
@@ -27,7 +37,7 @@ export type MotorPattern = z.infer<typeof motorPatternSchema>;
  * `seq` increments across all frame types, so a gap means a dropped frame.
  */
 const envelope = {
-  v: z.literal(PAYLOAD_VERSION),
+  v: z.union([z.literal(1), z.literal(2)]),
   id: z.string().min(1).max(32),
   seq: z.number().int().nonnegative(),
   ms: z.number().int().nonnegative(),
@@ -43,6 +53,24 @@ export const ppgSchema = z.object({
   bpm: z.number().nonnegative(),
   /** Mean of the last 4 beats. 0 until 4 beats have been seen. */
   bpmAvg: z.number().int().nonnegative(),
+
+  /**
+   * Blood oxygen percentage, computed on the device (v2 and later).
+   *
+   * -1 means the algorithm rejected the window. Always read `spo2Valid`
+   * first: a percentage the algorithm did not stand behind must never reach
+   * a screen.
+   */
+  spo2: z.number().int().min(-1).max(100).optional(),
+  spo2Valid: z.boolean().optional(),
+});
+
+/** Step counting, added in v2. */
+export const stepsSchema = z.object({
+  /** Since the device last powered on, not since midnight. */
+  count: z.number().int().nonnegative(),
+  /** Steps per minute while walking, 0 when still. */
+  cadence: z.number().int().min(0).max(300),
 });
 
 export const imuSchema = z.object({
@@ -73,6 +101,12 @@ export const telemetryFrameSchema = z.object({
   ppg: ppgSchema,
   imu: imuSchema,
   gsr: gsrSchema,
+  /**
+   * Absent on v1 frames. Null once stored, because Mongo keeps the key with a
+   * null rather than dropping it; both mean the same thing, so both are
+   * accepted and callers only ever check for a value.
+   */
+  steps: stepsSchema.nullish(),
   motor: z.object({ on: z.boolean(), pattern: motorPatternSchema }),
   flags: z.array(flagSchema),
 });
@@ -125,6 +159,7 @@ export const frameSchema = z.discriminatedUnion('t', [
 export type PpgData = z.infer<typeof ppgSchema>;
 export type ImuData = z.infer<typeof imuSchema>;
 export type GsrData = z.infer<typeof gsrSchema>;
+export type StepData = z.infer<typeof stepsSchema>;
 export type TelemetryFrame = z.infer<typeof telemetryFrameSchema>;
 export type StatusFrame = z.infer<typeof statusFrameSchema>;
 export type EventFrame = z.infer<typeof eventFrameSchema>;

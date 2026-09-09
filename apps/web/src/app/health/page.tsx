@@ -67,6 +67,10 @@ export default function HealthPage() {
       bpm: history.map((f) => f.ppg.bpmAvg || f.ppg.bpm).filter((v) => v > 0),
       skin: history.map((f) => f.gsr.raw),
       motion: history.map((f) => f.imu.mag),
+      spo2: history
+        .filter((f) => f.ppg.spo2Valid && typeof f.ppg.spo2 === 'number')
+        .map((f) => f.ppg.spo2 as number),
+      steps: history.flatMap((f) => (f.steps ? [f.steps.count] : [])),
     }),
     [history],
   );
@@ -190,18 +194,55 @@ export default function HealthPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <PendingTile
-              label="Blood oxygen"
-              color="#4C9AFF"
-              icon={<DropIcon className="h-5 w-5" />}
-              reason="The sensor collects the raw light readings this needs, but nothing works them into a percentage yet."
-            />
-            <PendingTile
-              label="Steps"
-              color="#7C6CF0"
-              icon={<StepsIcon className="h-5 w-5" />}
-              reason="The band has a motion sensor that could count these. Counting them is not written yet."
-            />
+            {latest?.ppg.spo2Valid === undefined ? (
+              <PendingTile
+                label="Blood oxygen"
+                color="#4C9AFF"
+                icon={<DropIcon className="h-5 w-5" />}
+                reason="This band's firmware is too old to work it out. Update the band to read it."
+              />
+            ) : (
+              <MetricTile
+                label="Blood oxygen"
+                value={
+                  latest.ppg.spo2Valid && latest.ppg.spo2 ? String(latest.ppg.spo2) : '--'
+                }
+                unit="%"
+                color="#4C9AFF"
+                icon={<DropIcon className="h-5 w-5" />}
+                data={series.spo2}
+                minSpan={6}
+                note={
+                  latest.ppg.spo2Valid
+                    ? undefined
+                    : latest.ppg.finger
+                      ? 'Working it out. Keep your finger still.'
+                      : 'Rest a finger on the sensor'
+                }
+              />
+            )}
+
+            {!latest?.steps ? (
+              <PendingTile
+                label="Steps"
+                color="#7C6CF0"
+                icon={<StepsIcon className="h-5 w-5" />}
+                reason="This band's firmware is too old to count them. Update the band to see steps."
+              />
+            ) : (
+              <MetricTile
+                label="Steps"
+                value={latest.steps.count.toLocaleString()}
+                color="#7C6CF0"
+                icon={<StepsIcon className="h-5 w-5" />}
+                data={series.steps}
+                note={
+                  latest.steps.cadence > 0
+                    ? `Walking, ${latest.steps.cadence} a minute`
+                    : 'Counted since the band was switched on'
+                }
+              />
+            )}
             <PendingTile
               label="Sleep"
               color="#7C6CF0"

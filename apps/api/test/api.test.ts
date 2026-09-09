@@ -353,6 +353,44 @@ describe('readings', () => {
     expect(times[0]).toBe(times[1]);
   });
 
+  // v2 firmware sends step counts and SpO2; v1 sends neither. Both have to
+  // land in the same collection without a migration.
+  it('stores steps and SpO2 from a v2 frame', async () => {
+    const { token } = await registerUser();
+    const deviceToken = await claimDevice(token);
+
+    const v2 = telemetry(20);
+    v2.v = 2;
+    v2.ppg.spo2 = 97;
+    v2.ppg.spo2Valid = true;
+    v2.steps = { count: 4213, cadence: 98 };
+
+    const res = await ingest(deviceToken, [v2]);
+    expect(res.body.accepted).toBe(1);
+
+    const readings = await request(app)
+      .get('/api/v1/devices/lacs-7a3f21/readings')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(readings.body[0].steps).toEqual({ count: 4213, cadence: 98 });
+    expect(readings.body[0].ppg.spo2).toBe(97);
+    expect(readings.body[0].ppg.spo2Valid).toBe(true);
+  });
+
+  it('stores a v1 frame alongside, with no step data', async () => {
+    const { token } = await registerUser();
+    const deviceToken = await claimDevice(token);
+
+    await ingest(deviceToken, [telemetry(21)]);
+
+    const readings = await request(app)
+      .get('/api/v1/devices/lacs-7a3f21/readings')
+      .set('Authorization', `Bearer ${token}`);
+
+    // Null rather than a fabricated zero, which would read as "stood still".
+    expect(readings.body[0].steps).toBeNull();
+  });
+
   it('404s latest before the device has ever reported', async () => {
     const { token } = await registerUser();
     await claimDevice(token);

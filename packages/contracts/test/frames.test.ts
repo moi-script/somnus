@@ -60,8 +60,8 @@ describe('frame schemas', () => {
     }
   });
 
-  it('rejects a future payload version rather than guessing', () => {
-    const r = parseFrameLine(TELEMETRY.replace('"v":1', '"v":2'));
+  it('rejects a payload version it does not know rather than guessing', () => {
+    const r = parseFrameLine(TELEMETRY.replace('"v":1', '"v":9'));
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.reason).toBe('schema');
@@ -84,6 +84,56 @@ describe('frame schemas', () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.reason).toBe('not-a-frame');
+  });
+});
+
+// v2 adds SpO2 and step counting. Both are optional, so a device on either
+// version reports into the same backend.
+const TELEMETRY_V2 =
+  '{"v":2,"t":"telemetry","id":"lacs-7a3f21","seq":150,"ms":30000,' +
+  '"ppg":{"ok":true,"finger":true,"ir":98421,"red":87233,"bpm":72.4,"bpmAvg":71,"spo2":97,"spo2Valid":true},' +
+  '"imu":{"ok":true,"ax":0.01,"ay":-0.02,"az":1,"gx":0.4,"gy":-1.2,"gz":0.1,"mag":1.01,"tempC":31.2},' +
+  '"gsr":{"ok":true,"raw":1820,"volt":1.47,"base":1800},' +
+  '"steps":{"count":4213,"cadence":98},' +
+  '"motor":{"on":false,"pattern":"idle"},"flags":[]}';
+
+describe('payload versions', () => {
+  it('accepts a v2 frame with SpO2 and steps', () => {
+    const r = parseFrameLine(TELEMETRY_V2);
+    expect(r.ok).toBe(true);
+    if (!r.ok || r.frame.t !== 'telemetry') return;
+    expect(r.frame.ppg.spo2).toBe(97);
+    expect(r.frame.ppg.spo2Valid).toBe(true);
+    expect(r.frame.steps?.count).toBe(4213);
+  });
+
+  // A phone can hold frames buffered before a firmware update. Rejecting them
+  // would throw away real recordings.
+  it('still accepts a v1 frame that carries neither field', () => {
+    const r = parseFrameLine(TELEMETRY);
+    expect(r.ok).toBe(true);
+    if (!r.ok || r.frame.t !== 'telemetry') return;
+    expect(r.frame.ppg.spo2).toBeUndefined();
+    expect(r.frame.steps).toBeUndefined();
+  });
+
+  it('carries the rejected sentinel through rather than hiding it', () => {
+    const r = parseFrameLine(
+      TELEMETRY_V2.replace('"spo2":97,"spo2Valid":true', '"spo2":-1,"spo2Valid":false'),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok || r.frame.t !== 'telemetry') return;
+    // The app keys off spo2Valid; -1 must never be shown as a percentage.
+    expect(r.frame.ppg.spo2).toBe(-1);
+    expect(r.frame.ppg.spo2Valid).toBe(false);
+  });
+
+  it('rejects an impossible oxygen percentage', () => {
+    expect(parseFrameLine(TELEMETRY_V2.replace('"spo2":97', '"spo2":140')).ok).toBe(false);
+  });
+
+  it('rejects a version nobody supports', () => {
+    expect(parseFrameLine(TELEMETRY_V2.replace('"v":2', '"v":3')).ok).toBe(false);
   });
 });
 
