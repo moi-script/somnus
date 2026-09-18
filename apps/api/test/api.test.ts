@@ -107,6 +107,20 @@ describe('ingest', () => {
 
   // The property the whole offline-buffer design rests on: a phone that dies
   // mid-flush retries the batch and must not double-write.
+  it('keeps frames from after a reboot, which start a new seq block', async () => {
+    const { token } = await registerUser();
+    const deviceToken = await claimDevice(token);
+    // Firmware 0.2.1+: seq = boot count x 1e9, so a second boot never reuses
+    // the first boot's numbers the way a counter reset to 0 did.
+    const bootOne = [1_000_000_001, 1_000_000_002].map((s) => telemetry(s));
+    const bootTwo = [2_000_000_001, 2_000_000_002].map((s) => telemetry(s));
+
+    await ingest(deviceToken, bootOne);
+    const afterReboot = await ingest(deviceToken, bootTwo);
+
+    expect(afterReboot.body).toEqual({ accepted: 2, duplicates: 0, rejected: 0 });
+  });
+
   it('is idempotent when the same batch is replayed', async () => {
     const { token } = await registerUser();
     const deviceToken = await claimDevice(token);
