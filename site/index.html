@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Somnus</title>
+  <meta name="description" content="Somnus pairs a wrist band and a bedside radar with an Android app, so you can see what your nights actually looked like." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* Same tokens as the app (apps/web/src/app/globals.css). */
+    :root {
+      --canvas: 244 246 251;
+      --card: 255 255 255;
+      --ink: 23 32 46;
+      --muted: 120 132 155;
+      --line: 231 235 243;
+      --shadow: 23 32 46;
+      --heart: 255 107 138;
+      --skin: 245 165 36;
+      --motion: 46 211 198;
+      --sleep: 124 108 240;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: 15 20 30;
+        --card: 23 30 43;
+        --ink: 233 238 246;
+        --muted: 138 150 171;
+        --line: 38 48 66;
+        --shadow: 0 0 0;
+        --heart: 255 129 156;
+        --skin: 255 187 77;
+        --motion: 78 226 213;
+        --sleep: 152 138 250;
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: Manrope, system-ui, sans-serif;
+      background: rgb(var(--canvas));
+      color: rgb(var(--ink));
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+    .muted { color: rgb(var(--muted)); }
+
+    header { padding: 22px 0; }
+    header .wrap { display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; text-decoration: none; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgb(var(--sleep) / 0.15); color: rgb(var(--sleep)); }
+    .nav-link { font-weight: 600; font-size: 15px; text-decoration: none; color: rgb(var(--muted)); }
+    .nav-link:hover { color: rgb(var(--ink)); }
+
+    .hero { display: grid; gap: 48px; align-items: center; padding: 40px 0 72px; }
+    @media (min-width: 860px) { .hero { grid-template-columns: 1.05fr 0.95fr; padding-top: 64px; } }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgb(var(--card)); box-shadow: 0 2px 16px rgb(var(--shadow) / 0.06); font-size: 13px; font-weight: 600; color: rgb(var(--muted)); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--sleep)); }
+    h1 { margin-top: 20px; font-size: clamp(38px, 6vw, 60px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800; }
+    h1 em { font-style: normal; color: rgb(var(--sleep)); }
+    .lede { margin-top: 18px; font-size: 18px; max-width: 34em; }
+
+    .actions { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 15px 24px; border-radius: 999px; background: rgb(var(--ink)); color: rgb(var(--canvas)); font-weight: 700; text-decoration: none; transition: opacity .15s; }
+    .btn-primary:hover { opacity: .9; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 22px; border-radius: 999px; border: 1px solid rgb(var(--line)); background: rgb(var(--card)); font-weight: 600; text-decoration: none; }
+    .fine { margin-top: 14px; font-size: 14px; }
+
+    .shots { display: flex; justify-content: center; gap: 18px; }
+    .phone { width: min(46%, 230px); border-radius: 30px; padding: 8px; background: rgb(var(--card)); box-shadow: 0 8px 28px rgb(var(--shadow) / 0.12); }
+    .phone img { display: block; width: 100%; border-radius: 23px; }
+    .phone:nth-child(2) { transform: translateY(36px); }
+    .shots-note { text-align: center; margin-top: 52px; font-size: 13px; }
+
+    section.block { padding: 56px 0; border-top: 1px solid rgb(var(--line)); }
+    h2 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -0.025em; line-height: 1.15; font-weight: 800; }
+    .intro { margin-top: 10px; max-width: 40em; }
+
+    .cards { margin-top: 32px; display: grid; gap: 16px; }
+    @media (min-width: 760px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+    .card { background: rgb(var(--card)); border-radius: 24px; padding: 26px; box-shadow: 0 2px 16px rgb(var(--shadow) / 0.06); }
+    .card h3 { margin-top: 16px; font-size: 18px; font-weight: 700; }
+    .card p { margin-top: 6px; font-size: 15px; }
+    .icon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; }
+    .icon svg { width: 24px; height: 24px; }
+    .i-heart { background: rgb(var(--heart) / 0.14); color: rgb(var(--heart)); }
+    .i-sleep { background: rgb(var(--sleep) / 0.15); color: rgb(var(--sleep)); }
+    .i-motion { background: rgb(var(--motion) / 0.14); color: rgb(var(--motion)); }
+
+    .honest { display: grid; gap: 16px; margin-top: 28px; }
+    @media (min-width: 760px) { .honest { grid-template-columns: 1fr 1fr; } }
+    .honest li { list-style: none; padding: 18px 20px; border-radius: 18px; border: 1px dashed rgb(var(--line)); font-size: 15px; }
+    .honest ul { padding: 0; display: grid; gap: 12px; }
+    .honest strong { display: block; font-weight: 700; margin-bottom: 2px; }
+
+    ol.steps { margin-top: 28px; padding: 0; display: grid; gap: 16px; }
+    @media (min-width: 760px) { ol.steps { grid-template-columns: repeat(3, 1fr); } }
+    ol.steps li { list-style: none; }
+    .num { font-family: ui-monospace, monospace; font-size: 14px; color: rgb(var(--motion)); font-weight: 700; }
+    ol.steps h3 { margin-top: 8px; font-size: 17px; font-weight: 700; }
+    ol.steps p { margin-top: 4px; font-size: 15px; }
+
+    .cta { margin: 16px 0 64px; padding: 40px 28px; border-radius: 28px; background: rgb(var(--card)); box-shadow: 0 2px 16px rgb(var(--shadow) / 0.06); text-align: center; }
+    .cta .actions { justify-content: center; }
+
+    footer { padding: 28px 0 40px; border-top: 1px solid rgb(var(--line)); font-size: 14px; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="./">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8 8 0 0 1 9.8 4a8 8 0 1 0 10.2 10.2Z"/></svg>
+        </span>
+        Somnus
+      </a>
+      <a class="nav-link" href="https://github.com/moi-script/somnus">GitHub</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> Thesis project · Android</span>
+        <h1>See what your nights <em>actually</em> looked like.</h1>
+        <p class="lede muted">
+          Somnus pairs a sensor band on your wrist with a radar by your bed.
+          The app shows your pulse, skin response and movement, how long you
+          were in the room each night, and what your bedroom light was doing
+          while you slept.
+        </p>
+        <div class="actions">
+          <a class="btn-primary" href="https://github.com/moi-script/somnus/releases/latest/download/somnus.apk">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+            Download for Android
+          </a>
+          <a class="btn" href="https://github.com/moi-script/somnus/releases">All releases</a>
+        </div>
+        <p class="fine muted">
+          Free, from GitHub releases. Android will warn you because it didn't
+          come from the Play Store; that's expected.
+        </p>
+      </div>
+
+      <div>
+        <div class="shots">
+          <div class="phone"><img src="assets/night.jpg" alt="The Sleep tab: a night of 7 hours 5 minutes in the room, a room strip with two gaps where the room emptied, and a light strip showing warm then blue light." width="457" height="635" /></div>
+          <div class="phone"><img src="assets/light.jpg" alt="Light controls: presets for warm night, reading, amber, red and off, brightness and warm-to-cool sliders, and a switch for radar control." width="457" height="635" /></div>
+        </div>
+        <p class="shots-note muted">Screens from the app, showing sample data.</p>
+      </div>
+    </div>
+
+    <section class="block">
+      <div class="wrap">
+        <h2>Three pieces, one picture</h2>
+        <p class="intro muted">Each piece does one job. The phone ties the band to the server; the room unit reports on its own over Wi-Fi.</p>
+        <div class="cards">
+          <article class="card">
+            <div class="icon i-heart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg></div>
+            <h3>The band</h3>
+            <p class="muted">Pulse and blood oxygen, skin response, motion and steps. It buzzes on a fall, and the phone keeps its readings while you're offline.</p>
+          </article>
+          <article class="card">
+            <div class="icon i-sleep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 15.5a5 5 0 0 1 0-7"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.6 18.4a9 9 0 0 1 0-12.8"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></div>
+            <h3>The room unit</h3>
+            <p class="muted">A 24 GHz radar by the bed that switches a smart bulb, and records when the room was in use and what the light was doing all night.</p>
+          </article>
+          <article class="card">
+            <div class="icon i-motion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="3" width="11" height="18" rx="2.5"/><path d="M11 17.5h2"/></svg></div>
+            <h3>The app</h3>
+            <p class="muted">Live readings, each night as a timeline, two weeks side by side, and controls for the bedroom light from your phone.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <h2>What it won't pretend to know</h2>
+        <p class="intro muted">A health number nobody measured is worse than an empty space. Where the hardware can't tell, the app says so.</p>
+        <div class="honest">
+          <ul>
+            <li><strong>In the room, not asleep</strong><span class="muted">The radar senses the room. It can't tell sleep from lying awake, so the app never claims to.</span></li>
+            <li><strong>Gaps stay gaps</strong><span class="muted">If the room unit loses Wi-Fi, that time is shown as missing. Nothing is filled in.</span></li>
+          </ul>
+          <ul>
+            <li><strong>Light, stated as fact</strong><span class="muted">"22 minutes of cool light after 23:00", not a sleep score.</span></li>
+            <li><strong>Not a medical device</strong><span class="muted">A student project for exploring your own data, not for diagnosis.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <h2>Installing it</h2>
+        <ol class="steps">
+          <li><span class="num">1</span><h3>Download on your phone</h3><p class="muted">Open this page on your Android phone and tap Download. The file lands in Downloads.</p></li>
+          <li><span class="num">2</span><h3>Allow this source</h3><p class="muted">Android blocks apps from outside the Play Store. Follow its Settings shortcut to allow your browser, then come back.</p></li>
+          <li><span class="num">3</span><h3>Install and grant Bluetooth</h3><p class="muted">The app asks for Bluetooth and location. Android needs both to find the band; the app never reads your position.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="cta">
+        <h2>Try Somnus</h2>
+        <p class="intro muted" style="margin-inline:auto">Android 6 or newer. You'll need the band or the room unit to see your own data.</p>
+        <div class="actions">
+          <a class="btn-primary" href="https://github.com/moi-script/somnus/releases/latest/download/somnus.apk">Download for Android</a>
+          <a class="btn" href="https://github.com/moi-script/somnus">Source on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap muted">
+      <span>Somnus · a thesis project</span>
+      <span><a href="https://github.com/moi-script/somnus">Code</a> · <a href="https://github.com/moi-script/sleep_monitoring">Band firmware</a></span>
+    </div>
+  </footer>
+</body>
+</html>

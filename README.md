@@ -1,4 +1,9 @@
-# LACS
+# Somnus
+
+**[Landing page](https://moi-script.github.io/somnus/)** ·
+**[Download the Android app](https://github.com/moi-script/somnus/releases/latest/download/somnus.apk)** ·
+[All releases](https://github.com/moi-script/somnus/releases) ·
+[Band firmware](https://github.com/moi-script/sleep_monitoring)
 
 Wearable sensor node and the software around it. A Seeed XIAO ESP32-C3 reads a
 MAX30102 pulse sensor, an MPU6050 accelerometer and a Grove GSR sensor, and
@@ -82,7 +87,7 @@ exclusively.
 npm run apk              # debug build
 ```
 
-`npm run apk` also publishes it to `apps/web/public/downloads/lacs.apk`, so
+`npm run apk` also publishes it to `apps/web/public/downloads/somnus.apk`, so
 the `/download` page serves it. The APK is gitignored - 25 MB of build output
 does not belong in the repo.
 
@@ -93,8 +98,9 @@ makes the app ship a copy of the previous APK inside itself, growing by
 
 **The API URL is compiled in**, so an APK only works against the address it
 was built for. `NEXT_PUBLIC_API_URL` must be your machine's LAN address
-before you build - `localhost` on a phone is the phone. The build prints the
-baked URL so this cannot fail silently:
+before you build - `localhost` on a phone is the phone. The router can hand
+the laptop a new address, so check it against `ipconfig` each time. The build
+prints the baked URL so this cannot fail silently:
 
 ```
 [web] API URL baked into this build: http://192.168.1.33:4000
@@ -108,7 +114,7 @@ Check what you actually shipped before handing the file to anyone:
 
 ```bash
 AAPT="$LOCALAPPDATA/Android/Sdk/build-tools/35.0.0/aapt2.exe"
-"$AAPT" dump badging apps/web/public/downloads/lacs.apk | grep uses-permission
+"$AAPT" dump badging apps/web/public/downloads/somnus.apk | grep uses-permission
 ```
 
 Dependencies inject permissions of their own. The SQLite plugin declared
@@ -117,6 +123,27 @@ BLE plugin declared coarse location uncapped; both are stripped in
 `AndroidManifest.xml` with `tools:node`. On a sideloaded app that Android
 already warns about, an unexplained fingerprint permission is what makes
 someone abandon the install.
+
+If Gradle says `JAVA_HOME is set to an invalid directory`, a Java update moved
+the JDK. Point it at the pinned JDK 21 for the one command:
+
+```bash
+JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot" npm run apk
+```
+
+### Releasing
+
+Each GitHub release attaches the APK as `somnus.apk`. The landing page and the
+in-app download link both use `releases/latest/download/somnus.apk`, so they
+always serve the newest release without edits.
+
+```bash
+npm run apk
+gh release create v0.3.0 apps/web/public/downloads/somnus.apk --title "Somnus 0.3.0" --notes-file notes.md
+```
+
+The landing page lives in `site/` and deploys to GitHub Pages on every push to
+`main` that touches it (`.github/workflows/pages.yml`).
 
 ### Android blocks plain HTTP
 

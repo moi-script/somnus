@@ -9,6 +9,14 @@ import { SubPage } from '@/components/SubPage';
  * rather than hidden. A user who is not expecting "this file might be harmful"
  * assumes the app is broken and stops.
  */
+/**
+ * GitHub serves the newest release's asset at this fixed address, so the link
+ * never needs updating as long as each release attaches a file named
+ * somnus.apk.
+ */
+const RELEASES = 'https://github.com/moi-script/somnus/releases';
+const LATEST_APK = `${RELEASES}/latest/download/somnus.apk`;
+
 const STEPS = [
   {
     title: 'Download the file',
@@ -41,9 +49,19 @@ export default function DownloadPage() {
           Wi-Fi, it keeps recording and syncs later.
         </p>
 
-        <a href="/downloads/somnus.apk" download className="btn-primary mt-6 inline-block">
+        <a href={LATEST_APK} className="btn-primary mt-6 inline-block">
           Download the app
         </a>
+        <p className="mt-3 text-sm text-muted">
+          The newest release, from GitHub.{' '}
+          <a href={RELEASES} className="underline">
+            All releases
+          </a>{' '}
+          ·{' '}
+          <a href="/downloads/somnus.apk" download className="underline">
+            copy on this computer
+          </a>
+        </p>
 
         {!android && (
           <p className="mt-3 text-sm text-muted">
