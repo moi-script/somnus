@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { commandSchema } from './commands.js';
+import { commandSchema, lightCommandProblem } from './commands.js';
+import { deviceIdSchema, deviceKindSchema } from './devices.js';
 import { eventFrameSchema, frameSchema, telemetryFrameSchema } from './frames.js';
 
 export const API_PREFIX = '/api/v1';
@@ -36,11 +37,6 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 
 // --- devices ---------------------------------------------------------------
 
-/** Device ids are minted by firmware from the eFuse MAC: lacs-7a3f21 */
-export const deviceIdSchema = z
-  .string()
-  .regex(/^lacs-[0-9a-f]{6}$/, 'expected a device id like lacs-7a3f21');
-
 export const claimDeviceSchema = z.object({
   deviceId: deviceIdSchema,
   name: z.string().min(1).max(60).optional(),
@@ -48,6 +44,7 @@ export const claimDeviceSchema = z.object({
 
 export const deviceSchema = z.object({
   deviceId: deviceIdSchema,
+  kind: deviceKindSchema,
   name: z.string(),
   fw: z.string().nullable(),
   online: z.boolean(),
@@ -109,7 +106,10 @@ export type StoredEvent = z.infer<typeof storedEventSchema>;
 
 // --- commands --------------------------------------------------------------
 
-export const queueCommandSchema = z.object({ command: commandSchema });
+export const queueCommandSchema = z.object({ command: commandSchema }).superRefine((body, ctx) => {
+  const problem = lightCommandProblem(body.command);
+  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['command'], message: problem });
+});
 
 export const commandStatusSchema = z.enum(['pending', 'sent', 'acked', 'failed']);
 
@@ -140,6 +140,8 @@ export const SSE_EVENTS = {
   event: 'event',
   status: 'status',
   ack: 'ack',
+  presence: 'presence',
+  light: 'light',
   /** Comment-only keepalive so proxies do not close an idle stream. */
   ping: 'ping',
 } as const;

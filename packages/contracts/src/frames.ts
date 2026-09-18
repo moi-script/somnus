@@ -111,6 +111,34 @@ export const telemetryFrameSchema = z.object({
   flags: z.array(flagSchema),
 });
 
+const bandSensorsSchema = z.object({
+  max30102: z.boolean(),
+  mpu6050: z.boolean(),
+  gsr: z.boolean(),
+});
+
+const bandConfigSchema = z.object({
+  hz: z.number().int().min(1).max(20),
+  gsrDelta: z.number().int().nonnegative(),
+  fallHighG: z.number(),
+  freeFallG: z.number(),
+  fingerLostMs: z.number().int().nonnegative(),
+  human: z.boolean(),
+});
+
+/** The room unit reports its radar and whether the bulb answered Tuya. */
+const roomSensorsSchema = z.object({
+  sen0395: z.boolean(),
+  bulb: z.boolean(),
+});
+
+const roomConfigSchema = z.object({
+  /** The radar is switching the light by itself. */
+  auto: z.boolean(),
+  /** How long the room must be empty before auto mode turns the light off. */
+  offDelayMs: z.number().int().nonnegative(),
+});
+
 export const statusFrameSchema = z.object({
   ...envelope,
   t: z.literal('status'),
@@ -118,19 +146,8 @@ export const statusFrameSchema = z.object({
   transport: z.string(),
   online: z.number().int().min(0),
   total: z.number().int().min(0),
-  sensors: z.object({
-    max30102: z.boolean(),
-    mpu6050: z.boolean(),
-    gsr: z.boolean(),
-  }),
-  config: z.object({
-    hz: z.number().int().min(1).max(20),
-    gsrDelta: z.number().int().nonnegative(),
-    fallHighG: z.number(),
-    freeFallG: z.number(),
-    fingerLostMs: z.number().int().nonnegative(),
-    human: z.boolean(),
-  }),
+  sensors: z.union([bandSensorsSchema, roomSensorsSchema]),
+  config: z.union([bandConfigSchema, roomConfigSchema]),
 });
 
 export const eventFrameSchema = z.object({
@@ -149,11 +166,58 @@ export const ackFrameSchema = z.object({
   detail: z.string().optional(),
 });
 
+// --- room unit -------------------------------------------------------------
+
+/**
+ * Who last changed the bulb. `external` means the room unit found the bulb in
+ * a state it did not set - someone used the Smart Life app or the wall switch.
+ */
+export const lightSourceSchema = z.enum(['auto', 'app', 'serial', 'external']);
+export type LightSource = z.infer<typeof lightSourceSchema>;
+
+/** Percentages, not Tuya's 10..1000 scale - the firmware converts. */
+export const lightColorSchema = z.object({
+  h: z.number().int().min(0).max(360),
+  s: z.number().int().min(0).max(100),
+  v: z.number().int().min(1).max(100),
+});
+
+/**
+ * What the bulb is doing. White mode fills `bright` and `temp` (0 warm, 100
+ * cool) and leaves `color` null; colour mode is the reverse.
+ */
+export const lightStateSchema = z.object({
+  on: z.boolean(),
+  mode: z.enum(['white', 'colour']),
+  bright: z.number().int().min(1).max(100).nullable(),
+  temp: z.number().int().min(0).max(100).nullable(),
+  color: lightColorSchema.nullable(),
+});
+
+/**
+ * The radar's view of the room. Sent on every change and every 60 s as a
+ * heartbeat, so silence means the unit is offline, not that the room is empty.
+ */
+export const presenceFrameSchema = z.object({
+  ...envelope,
+  t: z.literal('presence'),
+  present: z.boolean(),
+});
+
+export const lightFrameSchema = z.object({
+  ...envelope,
+  t: z.literal('light'),
+  ...lightStateSchema.shape,
+  source: lightSourceSchema,
+});
+
 export const frameSchema = z.discriminatedUnion('t', [
   telemetryFrameSchema,
   statusFrameSchema,
   eventFrameSchema,
   ackFrameSchema,
+  presenceFrameSchema,
+  lightFrameSchema,
 ]);
 
 export type PpgData = z.infer<typeof ppgSchema>;
@@ -164,5 +228,9 @@ export type TelemetryFrame = z.infer<typeof telemetryFrameSchema>;
 export type StatusFrame = z.infer<typeof statusFrameSchema>;
 export type EventFrame = z.infer<typeof eventFrameSchema>;
 export type AckFrame = z.infer<typeof ackFrameSchema>;
+export type PresenceFrame = z.infer<typeof presenceFrameSchema>;
+export type LightFrame = z.infer<typeof lightFrameSchema>;
+export type LightState = z.infer<typeof lightStateSchema>;
+export type LightColor = z.infer<typeof lightColorSchema>;
 export type Frame = z.infer<typeof frameSchema>;
 export type FrameType = Frame['t'];
