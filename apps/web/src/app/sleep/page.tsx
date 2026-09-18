@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { nightDateFor, type NightSummary } from '@lacs/contracts';
 import { api, getToken } from '@/lib/api';
 import { useDevice } from '@/lib/useDevice';
 import { useRoom } from '@/lib/useRoom';
-import { fmtClock, fmtDuration, fmtNightDate } from '@/lib/format';
+import { fmtClock, fmtDuration, nightLabel } from '@/lib/format';
 import { AppShell } from '@/components/AppShell';
 import { MetricTile } from '@/components/Metrics';
 import { NightStrips } from '@/components/NightStrips';
@@ -53,11 +53,7 @@ export default function SleepPage() {
   const index = nights?.findIndex((n) => n.date === selected) ?? -1;
   const night = index >= 0 ? nights![index]! : null;
 
-  const label = useMemo(() => {
-    const newest = nights?.[0]?.date;
-    if (selected !== newest) return fmtNightDate(selected);
-    return new Date().getHours() >= 18 ? 'Tonight so far' : 'Last night';
-  }, [nights, selected]);
+  const label = nightLabel(selected);
 
   const noRoom = devices !== null && !room;
 
@@ -213,7 +209,7 @@ function Night({ night }: { night: NightSummary }) {
           value={fmtDuration(light.coolOrBlueMs)}
           color="#6C7BFF"
           icon={<BulbIcon className="h-5 w-5" />}
-          note={light.coolOrBlueMs === 0 ? 'None this night' : 'While you were in the room'}
+          note={light.coolOrBlueMs === 0 ? 'None this night' : 'Cool white or blue, this night'}
         />
       </div>
 

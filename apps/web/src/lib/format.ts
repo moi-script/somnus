@@ -28,6 +28,23 @@ export function fmtNightDate(date: string): string {
   });
 }
 
+function localDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Nights are labelled by their evening, so today's date is the night that
+ * starts (or started) this evening and yesterday's is last night.
+ */
+export function nightLabel(date: string): string {
+  if (date === localDate(0)) return 'Tonight so far';
+  if (date === localDate(-1)) return 'Last night';
+  return fmtNightDate(date);
+}
+
 /** "14 min ago", "3 h ago". */
 export function fmtAgo(at: number, now = Date.now()): string {
   const ms = Math.max(0, now - at);

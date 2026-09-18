@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Reading, StoredEvent, TelemetryFrame } from '@lacs/contracts';
+import type { NightSummary, Reading, StoredEvent, TelemetryFrame } from '@lacs/contracts';
+import { fmtDuration, nightLabel } from '@/lib/format';
 import { api, getToken } from '@/lib/api';
 import { useDevice } from '@/lib/useDevice';
 import { useStream } from '@/lib/useStream';
@@ -31,7 +32,18 @@ interface CheckResult {
 
 export default function HealthPage() {
   const router = useRouter();
-  const { active, devices } = useDevice();
+  const { active, bands, room } = useDevice();
+  const [lastNight, setLastNight] = useState<NightSummary | null>(null);
+
+  // The newest night with anything in it. Tonight in progress usually has
+  // nothing yet, so look one further back too.
+  useEffect(() => {
+    if (!room) return;
+    api
+      .nights(room.deviceId, 2)
+      .then((nights) => setLastNight(nights.find((n) => n.recorded) ?? null))
+      .catch(() => setLastNight(null));
+  }, [room]);
   const [seed, setSeed] = useState<TelemetryFrame[]>([]);
   const [events, setEvents] = useState<StoredEvent[]>([]);
 
@@ -114,7 +126,7 @@ export default function HealthPage() {
     month: 'long',
   });
 
-  const noDevice = devices !== null && devices.length === 0;
+  const noDevice = bands !== null && bands.length === 0;
 
   return (
     <AppShell
@@ -243,12 +255,28 @@ export default function HealthPage() {
                 }
               />
             )}
-            <PendingTile
-              label="Sleep"
-              color="#7C6CF0"
-              icon={<MoonIcon className="h-5 w-5" />}
-              reason="Needs the band worn overnight and a way to tell sleep from sitting still. Neither exists yet."
-            />
+            {lastNight?.recorded ? (
+              <Link href="/sleep/" className="block">
+                <MetricTile
+                  label="Sleep"
+                  value={fmtDuration(lastNight.inRoomMs)}
+                  color="#7C6CF0"
+                  icon={<MoonIcon className="h-5 w-5" />}
+                  note={`in the room, ${nightLabel(lastNight.date).toLowerCase()}`}
+                />
+              </Link>
+            ) : (
+              <PendingTile
+                label="Sleep"
+                color="#7C6CF0"
+                icon={<MoonIcon className="h-5 w-5" />}
+                reason={
+                  room
+                    ? 'The room unit has not recorded a night yet. It needs an hour or more of someone in the room between 18:00 and 14:00.'
+                    : 'Add the room unit by your bed to see how long you were in the room each night.'
+                }
+              />
+            )}
             <PendingTile
               label="Body temperature"
               color="#FF9A62"
