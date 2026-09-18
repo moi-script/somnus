@@ -2,6 +2,9 @@ import type {
   AuthResponse,
   Command,
   Device,
+  LightSource,
+  LightState,
+  NightSummary,
   QueuedCommand,
   Reading,
   StoredEvent,
@@ -115,7 +118,25 @@ export const api = {
 
   commandHistory: (deviceId: string) =>
     request<QueuedCommand[]>(`/devices/${deviceId}/commands`),
+
+  roomLatest: (deviceId: string) => request<RoomLatest>(`/devices/${deviceId}/room/latest`),
+
+  night: (deviceId: string, date: string) =>
+    request<NightSummary>(`/devices/${deviceId}/nights/${date}?tz=${tz()}`),
+
+  nights: (deviceId: string, limit = 14) =>
+    request<NightSummary[]>(`/devices/${deviceId}/nights?limit=${limit}&tz=${tz()}`),
 };
+
+/** Nights run 18:00-14:00 on this device's clock, so the server is told which clock. */
+function tz(): number {
+  return new Date().getTimezoneOffset();
+}
+
+export interface RoomLatest {
+  presence: { present: boolean; at: string } | null;
+  light: { state: LightState; source: LightSource; at: string } | null;
+}
 
 /** EventSource cannot set headers, so the token rides in the query string. */
 export function streamUrl(deviceId: string): string {

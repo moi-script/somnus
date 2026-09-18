@@ -193,3 +193,25 @@ export function LinkIcon(p: IconProps) {
     </Svg>
   );
 }
+
+export function BulbIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M9 17.5h6" />
+      <path d="M10 20.5h4" />
+      <path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v1.6h5v-1.6c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z" />
+    </Svg>
+  );
+}
+
+export function RadarIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M8.5 15.5a5 5 0 0 1 0-7" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M5.6 18.4a9 9 0 0 1 0-12.8" />
+      <path d="M18.4 5.6a9 9 0 0 1 0 12.8" />
+    </Svg>
+  );
+}

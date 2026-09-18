@@ -1,16 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Device } from '@lacs/contracts';
 import { api, getToken } from './api';
 
 const ACTIVE_KEY = 'lacs.activeDevice';
 
 /**
- * The device every tab is looking at.
+ * The band every tab is looking at, and the room unit if there is one.
  *
- * Kept in localStorage rather than the URL so switching tabs does not lose it,
- * and so the app reopens on whatever you were last watching.
+ * `active` is only ever a band. Health, Exercise and the rest read heart rate
+ * and motion from it, and a room unit has neither - so the two kinds are kept
+ * apart here rather than every page having to check.
+ *
+ * The selection is kept in localStorage rather than the URL so switching tabs
+ * does not lose it, and so the app reopens on whatever you were last watching.
  */
 export function useDevice() {
   const [devices, setDevices] = useState<Device[] | null>(null);
@@ -23,9 +27,10 @@ export function useDevice() {
       const list = await api.devices();
       setDevices(list);
 
+      const bands = list.filter((d) => d.kind === 'band');
       const stored = window.localStorage.getItem(ACTIVE_KEY);
-      const valid = stored && list.some((d) => d.deviceId === stored) ? stored : null;
-      setActiveId(valid ?? list[0]?.deviceId ?? null);
+      const valid = stored && bands.some((d) => d.deviceId === stored) ? stored : null;
+      setActiveId(valid ?? bands[0]?.deviceId ?? null);
     } catch (err) {
       setError((err as Error).message);
       setDevices([]);
@@ -41,7 +46,9 @@ export function useDevice() {
     setActiveId(deviceId);
   }, []);
 
-  const active = devices?.find((d) => d.deviceId === activeId) ?? null;
+  const bands = useMemo(() => devices?.filter((d) => d.kind === 'band') ?? null, [devices]);
+  const room = devices?.find((d) => d.kind === 'room') ?? null;
+  const active = bands?.find((d) => d.deviceId === activeId) ?? null;
 
-  return { devices, active, activeId, select, reload: load, error };
+  return { devices, bands, room, active, activeId, select, reload: load, error };
 }

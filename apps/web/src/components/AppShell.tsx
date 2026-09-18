@@ -6,12 +6,14 @@ import {
   BluetoothIcon,
   ChipIcon,
   HeartIcon,
+  MoonIcon,
   PersonIcon,
   RunIcon,
 } from './Icons';
 
 const TABS = [
   { href: '/health/', label: 'Health', Icon: HeartIcon },
+  { href: '/sleep/', label: 'Sleep', Icon: MoonIcon },
   { href: '/exercise/', label: 'Exercise', Icon: RunIcon },
   { href: '/device/', label: 'Device', Icon: ChipIcon },
   { href: '/me/', label: 'Me', Icon: PersonIcon },
