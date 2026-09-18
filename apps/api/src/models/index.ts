@@ -100,3 +100,32 @@ const commandSchema = new Schema(
 commandSchema.index({ deviceId: 1, status: 1, createdAt: 1 });
 
 export const CommandModel = mongoose.model('Command', commandSchema);
+
+// --- room frames -----------------------------------------------------------
+
+/**
+ * Presence and light frames from the room unit, in one collection since both
+ * are replayed together to rebuild a night. `t` says which.
+ */
+const roomFrameSchema = new Schema(
+  {
+    deviceId: { type: String, required: true },
+    ownerId: { type: Schema.Types.ObjectId, required: true, index: true },
+    seq: { type: Number, required: true },
+    deviceMs: { type: Number, required: true },
+    recordedAt: { type: Date, required: true },
+    t: { type: String, enum: ['presence', 'light'], required: true },
+    /** presence frames only */
+    present: { type: Boolean },
+    /** light frames only: {on, mode, bright, temp, color} */
+    state: { type: Schema.Types.Mixed },
+    source: { type: String },
+  },
+  { versionKey: false },
+);
+
+roomFrameSchema.index({ deviceId: 1, t: 1, recordedAt: -1 });
+// Same idempotency guarantee as readings: a replayed batch cannot duplicate.
+roomFrameSchema.index({ deviceId: 1, seq: 1 }, { unique: true });
+
+export const RoomFrameModel = mongoose.model('RoomFrame', roomFrameSchema);

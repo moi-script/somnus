@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { ackCommandSchema, queueCommandSchema } from '@lacs/contracts';
+import {
+  ackCommandSchema,
+  commandFitsDevice,
+  deviceKindOf,
+  queueCommandSchema,
+  type Command,
+} from '@lacs/contracts';
 import { CommandModel } from '../models/index.js';
 import { requireDevice, requireOwnedDevice, requireUser } from '../middleware/auth.js';
 import { asyncHandler, validateBody } from '../middleware/helpers.js';
@@ -33,8 +39,9 @@ function toDto(c: CommandLean) {
 /**
  * Queue a command from the dashboard.
  *
- * The server never talks to the node - it has no radio. The command waits
- * here until the phone bridge drains it and writes it over BLE.
+ * The server never talks to a device directly. A band's command waits here
+ * until the phone drains it and writes it over BLE; the room unit drains its
+ * own over WiFi.
  */
 commandsRouter.post(
   '/devices/:deviceId/commands',
@@ -42,7 +49,15 @@ commandsRouter.post(
   requireOwnedDevice,
   validateBody(queueCommandSchema),
   asyncHandler(async (req, res) => {
-    const { command } = req.body as { command: unknown };
+    const { command } = req.body as { command: Command };
+    const kind = deviceKindOf(req.params.deviceId!);
+    if (!commandFitsDevice(command, kind)) {
+      res.status(400).json({
+        error: 'wrong_device_kind',
+        detail: `a ${kind} does not understand "${command.cmd}"`,
+      });
+      return;
+    }
     const created = await CommandModel.create({
       deviceId: req.params.deviceId,
       ownerId: req.user!.id,

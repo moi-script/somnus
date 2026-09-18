@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ingestRequestSchema, type Frame } from '@lacs/contracts';
-import { DeviceModel, EventModel, ReadingModel } from '../models/index.js';
+import { DeviceModel, EventModel, ReadingModel, RoomFrameModel } from '../models/index.js';
 import { requireDevice } from '../middleware/auth.js';
 import { asyncHandler, validateBody } from '../middleware/helpers.js';
 import { frameBus } from '../bus.js';
@@ -104,6 +104,7 @@ ingestRouter.post(
 
     const readings: Record<string, unknown>[] = [];
     const events: Record<string, unknown>[] = [];
+    const roomFrames: Record<string, unknown>[] = [];
     let latestFw: string | null = null;
 
     for (const frame of frames) {
@@ -138,6 +139,31 @@ ingestRouter.post(
             value: frame.value,
           });
           break;
+        case 'presence':
+          roomFrames.push({
+            deviceId,
+            ownerId,
+            seq: frame.seq,
+            deviceMs: frame.ms,
+            recordedAt: timestampFor(frame),
+            t: 'presence',
+            present: frame.present,
+          });
+          break;
+        case 'light': {
+          const { on, mode, bright, temp, color } = frame;
+          roomFrames.push({
+            deviceId,
+            ownerId,
+            seq: frame.seq,
+            deviceMs: frame.ms,
+            recordedAt: timestampFor(frame),
+            t: 'light',
+            state: { on, mode, bright, temp, color },
+            source: frame.source,
+          });
+          break;
+        }
         case 'status':
           latestFw = frame.fw;
           break;
@@ -150,22 +176,19 @@ ingestRouter.post(
 
     // Status and ack frames are fanned out live but never stored, so they
     // count as neither accepted nor rejected.
-    const stored = readings.length + events.length;
+    const stored = readings.length + events.length + roomFrames.length;
     const ignored = frames.filter((f) => f.t === 'status' || f.t === 'ack').length;
     let rejected = frames.length - stored - ignored;
 
-    const readingResult = await insertIgnoringDuplicates(
-      ReadingModel as unknown as InsertManyCapable,
-      readings,
-    );
-    const eventResult = await insertIgnoringDuplicates(
-      EventModel as unknown as InsertManyCapable,
-      events,
-    );
+    const results = [
+      await insertIgnoringDuplicates(ReadingModel as unknown as InsertManyCapable, readings),
+      await insertIgnoringDuplicates(EventModel as unknown as InsertManyCapable, events),
+      await insertIgnoringDuplicates(RoomFrameModel as unknown as InsertManyCapable, roomFrames),
+    ];
 
-    const accepted = readingResult.accepted + eventResult.accepted;
-    const duplicates = readingResult.duplicates + eventResult.duplicates;
-    rejected += readingResult.rejected + eventResult.rejected;
+    const accepted = results.reduce((n, r) => n + r.accepted, 0);
+    const duplicates = results.reduce((n, r) => n + r.duplicates, 0);
+    rejected += results.reduce((n, r) => n + r.rejected, 0);
 
     await DeviceModel.updateOne(
       { deviceId },

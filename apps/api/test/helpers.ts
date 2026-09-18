@@ -88,3 +88,33 @@ export function ingest(deviceToken: string, frames: Frame[]) {
     .set('Authorization', `Bearer ${deviceToken}`)
     .send({ frames });
 }
+
+export const ROOM_ID = 'room-7c1a02';
+
+/** A presence frame as the room unit sends it. */
+export function presence(seq: number, ms: number, present: boolean, deviceId = ROOM_ID): Frame {
+  return { v: 2, t: 'presence', id: deviceId, seq, ms, present };
+}
+
+/** A light frame in white mode unless a state is given. */
+export function light(
+  seq: number,
+  ms: number,
+  state: Partial<Extract<Frame, { t: 'light' }>> = {},
+  deviceId = ROOM_ID,
+): Frame {
+  return {
+    v: 2,
+    t: 'light',
+    id: deviceId,
+    seq,
+    ms,
+    on: true,
+    mode: 'white',
+    bright: 20,
+    temp: 10,
+    color: null,
+    source: 'auto',
+    ...state,
+  };
+}

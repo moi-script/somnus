@@ -7,6 +7,7 @@ import { devicesRouter } from './routes/devices.js';
 import { ingestRouter } from './routes/ingest.js';
 import { commandsRouter } from './routes/commands.js';
 import { streamRouter } from './routes/stream.js';
+import { roomRouter } from './routes/room.js';
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp() {
   });
 
   app.use(`${API_PREFIX}/auth`, authRouter);
+  app.use(`${API_PREFIX}/devices`, roomRouter);
   app.use(`${API_PREFIX}/devices`, devicesRouter);
   app.use(`${API_PREFIX}/ingest`, ingestRouter);
   app.use(`${API_PREFIX}/stream`, streamRouter);

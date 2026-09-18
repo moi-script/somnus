@@ -1,14 +1,18 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { claimDeviceSchema, readingsQuerySchema } from '@lacs/contracts';
+import { claimDeviceSchema, deviceKindOf, readingsQuerySchema } from '@lacs/contracts';
 import { DeviceModel, EventModel, ReadingModel } from '../models/index.js';
 import { mintIngestToken, requireOwnedDevice, requireUser } from '../middleware/auth.js';
 import { asyncHandler, validateBody } from '../middleware/helpers.js';
 
 export const devicesRouter = Router();
 
-/** No frame in this long and the dashboard shows the node as offline. */
-const ONLINE_WINDOW_MS = 15_000;
+/**
+ * No frame in this long and the dashboard shows the device as offline. A band
+ * streams several frames a second; a quiet room unit only sends a presence
+ * heartbeat every 60 s, so it gets more slack.
+ */
+const ONLINE_WINDOW_MS = { band: 15_000, room: 90_000 } as const;
 
 interface DeviceLean {
   deviceId: string;
@@ -19,11 +23,13 @@ interface DeviceLean {
 }
 
 function toDto(d: DeviceLean) {
+  const kind = deviceKindOf(d.deviceId);
   return {
     deviceId: d.deviceId,
+    kind,
     name: d.name,
     fw: d.fw ?? null,
-    online: d.lastSeenAt ? Date.now() - d.lastSeenAt.getTime() < ONLINE_WINDOW_MS : false,
+    online: d.lastSeenAt ? Date.now() - d.lastSeenAt.getTime() < ONLINE_WINDOW_MS[kind] : false,
     lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
     createdAt: d.createdAt.toISOString(),
   };
