@@ -31,6 +31,10 @@ function loadRootEnv() {
 
 const rootEnv = loadRootEnv();
 
+// A value set in the shell wins over the file, so a one-off run can point at
+// another API without editing .env.
+if (process.env.NEXT_PUBLIC_API_URL) rootEnv.NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 if (rootEnv.NEXT_PUBLIC_API_URL) {
   console.log(`[web] API URL baked into this build: ${rootEnv.NEXT_PUBLIC_API_URL}`);
 }
