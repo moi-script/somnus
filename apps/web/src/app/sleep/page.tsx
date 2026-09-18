@@ -206,7 +206,7 @@ function Night({ night }: { night: NightSummary }) {
         />
         <MetricTile
           label="Cool and blue light"
-          value={fmtDuration(light.coolOrBlueMs)}
+          value={light.coolOrBlueMs === 0 ? 'None' : fmtDuration(light.coolOrBlueMs)}
           color="#6C7BFF"
           icon={<BulbIcon className="h-5 w-5" />}
           note={light.coolOrBlueMs === 0 ? 'None this night' : 'Cool white or blue, this night'}

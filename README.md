@@ -8,11 +8,19 @@ it live.
 ## How the pieces connect
 
 ```
-XIAO ──BLE──> Android app ──HTTPS──> Express ──> MongoDB
-  │            (SQLite buffer)          │
-  └──WiFi─────────────────────────────> │  (planned, no phone needed)
-                                        └──SSE──> Next.js dashboard
+Band (C3) ──BLE──> Android app ──HTTPS──> Express ──> MongoDB
+                   (SQLite buffer)          │
+Room unit (C6) ──WiFi─────────────────────> │  (no phone needed)
+   │  radar + Tuya bulb                     └──SSE──> Next.js dashboard
 ```
+
+**The room unit** is a second board: a XIAO ESP32-C6 with a SEN0395 presence
+radar that switches a Tuya bulb. It posts `presence` and `light` frames
+straight to `/ingest` over WiFi and drains its own commands. The Sleep tab
+turns each night (18:00–14:00) into time in the room, how often the room
+emptied, and what the light was doing. The radar senses the room, not the
+bed, so the app never claims to know when you were asleep. Firmware and setup:
+`C:\Users\moises\Documents\Arduino\esp_flash_mmwave`.
 
 **The phone is the bridge.** A deployed server has no Bluetooth radio, so it
 cannot talk to the node directly. The app connects over BLE, writes every frame

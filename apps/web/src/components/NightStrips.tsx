@@ -25,7 +25,9 @@ export function NightStrips({ night }: { night: NightSummary }) {
   const hours: number[] = [];
   for (let t = firstHour; t < stretch.end; t += HOUR) hours.push(t);
   const every = Math.max(1, Math.ceil(hours.length / 4));
-  const edge = span * 0.1;
+  // A clock label is about an eighth of the strip on a phone; keep hour
+  // ticks clear of the start and end labels.
+  const edge = span * 0.18;
   const ticks = hours.filter(
     (t, i) => i % every === 0 && t - stretch.start > edge && stretch.end - t > edge,
   );
