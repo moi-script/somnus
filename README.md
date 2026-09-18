@@ -161,6 +161,31 @@ API produces no exception at all.
 `allowMixedContent` in `capacitor.config.ts` does not cover this - it governs
 WebView mixed content, not the platform policy.
 
+## Hosting
+
+The API runs on [Render](https://render.com) (free web service) with a
+[MongoDB Atlas](https://www.mongodb.com/atlas) free database, so the app and
+the room unit reach it at one fixed `https://` address from any network. The
+band is unaffected: it only ever talks to the phone, over Bluetooth.
+
+One-time setup:
+
+1. **Atlas:** create a free M0 cluster. Under *Database Access* add a user;
+   under *Network Access* allow `0.0.0.0/0` (Render's addresses change).
+   *Connect → Drivers* gives a `mongodb+srv://…` string; add `/lacs` before
+   the `?`.
+2. **Render:** *New → Blueprint*, pick `moi-script/somnus`. It reads
+   `render.yaml` and asks for `MONGODB_URI`: paste the Atlas string.
+   `JWT_SECRET` is generated for you.
+3. When it is live, `https://<service>.onrender.com/health` answers
+   `{"ok":true}`. Put that address in `.env` as `NEXT_PUBLIC_API_URL` and
+   rebuild the APK.
+
+Every push to `main` redeploys. The free service sleeps after 15 minutes
+without requests and takes about 30 seconds to wake; a room unit reporting
+every minute keeps it awake. Accounts and data start empty on the hosted
+database: register again in the app and re-add each device.
+
 ## Tests
 
 ```bash
