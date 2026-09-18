@@ -1,0 +1,26 @@
+# Render Blueprint for the Somnus API.
+# Render reads this when you create a Blueprint from the repo:
+# dashboard.render.com -> New -> Blueprint -> moi-script/somnus.
+services:
+  - type: web
+    name: somnus-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm ci && npm run build:contracts && npm run build --workspace @lacs/api
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Paste the Atlas connection string when Render asks. Never commit it.
+      - key: MONGODB_URI
+        sync: false
+      # Render generates a random secret once and keeps it.
+      - key: JWT_SECRET
+        generateValue: true
+      # The Android app's webview, and the dashboard in local development.
+      - key: CORS_ORIGINS
+        value: https://localhost,http://localhost,capacitor://localhost,http://localhost:3000
