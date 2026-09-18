@@ -24,6 +24,8 @@ export interface RoomData {
   lastHeardAt: number | null;
   light: RoomLight | null;
   lastAck: RoomAck | null;
+  /** Radar switching the light. null until a status frame has said. */
+  auto: boolean | null;
 }
 
 /**
@@ -37,6 +39,7 @@ export function useRoom(deviceId: string | null): RoomData {
   const [lastHeardAt, setLastHeardAt] = useState<number | null>(null);
   const [light, setLight] = useState<RoomLight | null>(null);
   const [lastAck, setLastAck] = useState<RoomAck | null>(null);
+  const [auto, setAuto] = useState<boolean | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   // Re-evaluate "online" as time passes, even when nothing arrives.
@@ -95,7 +98,12 @@ export function useRoom(deviceId: string | null): RoomData {
       setLastAck({ cmd: frame.cmd, ok: frame.ok, detail: frame.detail ?? null, at: Date.now() });
     });
 
-    source.addEventListener('status', () => heard());
+    source.addEventListener('status', (e) => {
+      const frame = read(e);
+      if (frame.t !== 'status') return;
+      heard();
+      if ('auto' in frame.config) setAuto(frame.config.auto);
+    });
 
     return () => {
       cancelled = true;
@@ -109,5 +117,6 @@ export function useRoom(deviceId: string | null): RoomData {
     lastHeardAt,
     light,
     lastAck,
+    auto,
   };
 }
