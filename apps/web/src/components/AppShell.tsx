@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LATEST_APK, useUpdate } from '@/lib/update';
 import {
   BluetoothIcon,
   ChipIcon,
@@ -41,6 +42,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
+  const { update, showBanner, dismiss } = useUpdate();
 
   return (
     <div className="min-h-screen pb-28 sm:pb-10">
@@ -89,7 +91,30 @@ export function AppShell({
         </nav>
       </header>
 
-      <main className="mx-auto max-w-3xl px-5 py-6 sm:px-8">{children}</main>
+      <main className="mx-auto max-w-3xl px-5 py-6 sm:px-8">
+        {showBanner && update && (
+          <div className="card mb-4 flex items-center gap-3 px-5 py-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Somnus {update.version} is out</p>
+              <p className="text-sm text-muted">
+                Install it over this one. Your readings stay on the phone.
+              </p>
+            </div>
+            <a href={LATEST_APK} className="btn-primary shrink-0 !py-2 text-sm">
+              Update
+            </a>
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Not now"
+              className="shrink-0 px-1 text-xl leading-none text-muted"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Phones: thumb-reachable bar pinned to the bottom. */}
       <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-card/95 backdrop-blur sm:hidden">

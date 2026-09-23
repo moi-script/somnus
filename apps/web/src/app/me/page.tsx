@@ -7,6 +7,8 @@ import { api, getToken, setToken } from '@/lib/api';
 import { useDevice } from '@/lib/useDevice';
 import { readTheme, setTheme, type Theme } from '@/lib/theme';
 import { AppShell } from '@/components/AppShell';
+import { APP_VERSION, useUpdate } from '@/lib/update';
+import { isNative } from '@/lib/platform';
 import {
   ChevronIcon,
   HelpIcon,
@@ -64,6 +66,10 @@ export default function MePage() {
     setTargets(next);
     window.localStorage.setItem(TARGETS_KEY, JSON.stringify(next));
   }, []);
+
+  const { update } = useUpdate();
+  const [native, setNative] = useState(false);
+  useEffect(() => setNative(isNative()), []);
 
   const initials = user?.email.slice(0, 2).toUpperCase() ?? '··';
 
@@ -246,7 +252,14 @@ export default function MePage() {
         </section>
 
         <Link href="/download/" className="card row rounded-card">
-          <span className="flex-1 font-medium">Get the Android app</span>
+          <span className="flex-1 font-medium">
+            {native ? `Somnus ${APP_VERSION}` : 'Get the Android app'}
+          </span>
+          {native && (
+            <span className={`text-sm ${update ? 'text-motion' : 'text-muted'}`}>
+              {update ? `${update.version} available` : 'Up to date'}
+            </span>
+          )}
           <ChevronIcon className="h-5 w-5 text-muted" />
         </Link>
 

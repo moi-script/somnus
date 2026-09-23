@@ -35,6 +35,15 @@ const rootEnv = loadRootEnv();
 // another API without editing .env.
 if (process.env.NEXT_PUBLIC_API_URL) rootEnv.NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// The installed app compares this against the newest GitHub release to decide
+// whether to offer an update. apps/mobile/package.json is the single source.
+rootEnv.NEXT_PUBLIC_APP_VERSION = JSON.parse(
+  fs.readFileSync(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../mobile/package.json'),
+    'utf8',
+  ),
+).version;
+
 if (rootEnv.NEXT_PUBLIC_API_URL) {
   console.log(`[web] API URL baked into this build: ${rootEnv.NEXT_PUBLIC_API_URL}`);
 }

@@ -137,10 +137,10 @@ Each GitHub release attaches the APK as `somnus.apk`. The landing page and the
 in-app download link both use `releases/latest/download/somnus.apk`, so they
 always serve the newest release without edits.
 
-```bash
-npm run apk
-gh release create v0.3.0 apps/web/public/downloads/somnus.apk --title "Somnus 0.3.0" --notes-file notes.md
-```
+The installed app checks GitHub's latest release and shows an update banner
+when it is newer than the app's own version. **Follow
+[docs/RELEASING.md](docs/RELEASING.md) for every release**: it has the steps,
+including the version bump that makes the update check work.
 
 The landing page lives in `site/` and deploys to GitHub Pages on every push to
 `main` that touches it (`.github/workflows/pages.yml`).
