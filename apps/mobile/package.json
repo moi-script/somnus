@@ -1,6 +1,6 @@
 {
   "name": "@lacs/mobile",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Capacitor shell that packages the LACS dashboard as a sideloadable Android APK.",
   "scripts": {
