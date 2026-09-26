@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import type { MotorPattern } from '@lacs/contracts';
 import { api } from '@/lib/api';
 import { useDevice } from '@/lib/useDevice';
 import { useStream } from '@/lib/useStream';
 import { isNative } from '@/lib/platform';
+import { getSession, subscribe } from '@/lib/native/session';
 import { AppShell } from '@/components/AppShell';
 import { BluetoothIcon, ChevronIcon, ChipIcon, RadarIcon } from '@/components/Icons';
 
@@ -23,6 +24,7 @@ export default function DevicePage() {
   const { bands, room, active, select, reload } = useDevice();
   const { state, latest } = useStream(active?.deviceId ?? null);
   const [native, setNative] = useState(false);
+  const { status: ble } = useSyncExternalStore(subscribe, getSession, getSession);
 
   const [newId, setNewId] = useState('');
   const [claimed, setClaimed] = useState<{ id: string; token: string } | null>(null);
@@ -101,7 +103,9 @@ export default function DevicePage() {
 
           {native && (
             <Link href="/node/" className="btn-primary mt-5 inline-block">
-              Connect over Bluetooth
+              {ble.state === 'connected'
+                ? `Connected to ${ble.name} over Bluetooth`
+                : 'Connect over Bluetooth'}
             </Link>
           )}
           {!native && (

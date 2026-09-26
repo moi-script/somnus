@@ -1,25 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import type { Frame } from '@lacs/contracts';
 import { SubPage } from '@/components/SubPage';
 import { isNative } from '@/lib/platform';
-import type { BleStatus, Connection } from '@/lib/native/ble';
-import type { SyncStats } from '@/lib/native/sync';
+import {
+  disconnect,
+  getSession,
+  pair,
+  resetError,
+  subscribe,
+} from '@/lib/native/session';
 
 /**
  * The phone-only screen: pair with the node over Bluetooth and watch the
  * buffer drain. Hidden in a browser, where none of it can work.
+ *
+ * The connection itself lives in lib/native/session, so going back from here
+ * leaves the band connected and uploading.
  */
 export default function NodePage() {
   const [native, setNative] = useState<boolean | null>(null);
-  const [status, setStatus] = useState<BleStatus>({ state: 'idle' });
-  const [stats, setStats] = useState<SyncStats | null>(null);
-  const [lastFrame, setLastFrame] = useState<Frame | null>(null);
+  const { status, stats, lastFrame } = useSyncExternalStore(subscribe, getSession, getSession);
   const [token, setTokenValue] = useState('');
-  const connectionRef = useRef<Connection | null>(null);
-  const bridgeRef = useRef<{ start: () => void; stop: () => void; ingestFrame: (f: Frame) => Promise<void>; flush: () => Promise<void> } | null>(null);
 
   useEffect(() => {
     setNative(isNative());
@@ -27,76 +30,6 @@ export default function NodePage() {
       const { deviceToken } = await import('@/lib/native/sync');
       setTokenValue(deviceToken() ?? '');
     })();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      bridgeRef.current?.stop();
-      void connectionRef.current?.disconnect();
-    };
-  }, []);
-
-  const pair = useCallback(async () => {
-    setStatus({ state: 'scanning' });
-    try {
-      const ble = await import('@/lib/native/ble');
-      const { Bridge, deviceToken, setDeviceToken } = await import('@/lib/native/sync');
-
-      // The field is prefilled with the saved token, so what it holds now is
-      // what the user means; a stale saved one would be rejected on upload.
-      const stored = token.trim() || deviceToken();
-      if (!stored) {
-        setStatus({
-          state: 'error',
-          message: 'Add the ingest token first. You get it when you add the node on the Device tab.',
-        });
-        return;
-      }
-      setDeviceToken(stored);
-
-      await ble.initialize();
-      if (!(await ble.isEnabled())) {
-        setStatus({ state: 'error', message: 'Bluetooth is off. Turn it on and try again.' });
-        return;
-      }
-
-      const chosen = await ble.requestDevice();
-      setStatus({ state: 'connecting', name: chosen.name });
-
-      const bridge = new Bridge(
-        stored,
-        async (line) => {
-          await connectionRef.current?.send(line);
-        },
-        setStats,
-      );
-
-      const connection = await ble.connect(
-        chosen.deviceId,
-        (frame) => {
-          setLastFrame(frame);
-          void bridge.ingestFrame(frame);
-        },
-        () => {
-          setStatus({ state: 'error', message: 'The node disconnected.' });
-          bridge.stop();
-        },
-      );
-
-      connectionRef.current = connection;
-      bridgeRef.current = bridge;
-      bridge.start();
-      setStatus({ state: 'connected', name: chosen.name, deviceId: chosen.deviceId });
-    } catch (err) {
-      setStatus({ state: 'error', message: (err as Error).message });
-    }
-  }, [token]);
-
-  const disconnect = useCallback(async () => {
-    bridgeRef.current?.stop();
-    await connectionRef.current?.disconnect();
-    connectionRef.current = null;
-    setStatus({ state: 'idle' });
   }, []);
 
   if (native === null) return null;
@@ -145,7 +78,7 @@ export default function NodePage() {
             <p className="mt-1 text-sm text-muted">
               Shown once when you add the node on the Device tab.
             </p>
-            <button type="button" className="btn-primary mt-4" onClick={() => void pair()}>
+            <button type="button" className="btn-primary mt-4" onClick={() => void pair(token)}>
               Find my node
             </button>
           </>
@@ -199,7 +132,7 @@ export default function NodePage() {
             <p className="mt-4 rounded-2xl border border-alarm/30 bg-alarm/10 px-3 py-2 text-sm text-alarm">
               {status.message}
             </p>
-            <button type="button" className="btn mt-4" onClick={() => setStatus({ state: 'idle' })}>
+            <button type="button" className="btn mt-4" onClick={resetError}>
               Try again
             </button>
           </>

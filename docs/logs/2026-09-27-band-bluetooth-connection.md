@@ -111,9 +111,13 @@ rejected batch was deleted from the phone's buffer.
 | `apps/web/src/lib/native/sync.ts` | 401/403 now keep the batch buffered and show "Server rejected the device key - re-add the band and paste the new key". Other 4xx still drop the batch. |
 | APK | Rebuilt with `npm run apk` (JDK 21) against the Render API, including both app fixes. |
 
+Released as **Somnus 0.4.1** (versionCode 401):
+https://github.com/moi-script/somnus/releases/tag/v0.4.1 — commits `33976be`
+(fixes) and `12e612a` (version bump).
+
 ### Steps to recover
 
-1. Install the new APK over the old one.
+1. Install 0.4.1 over the old app.
 2. In the app, **Device → Add a band** with `lacs-79deec` again; copy the new
    key.
 3. **Connect over Bluetooth** → replace whatever is in the key field with the
@@ -121,6 +125,32 @@ rejected batch was deleted from the phone's buffer.
 
 - [ ] Upload status clears and the uploaded count rises.
 - [ ] Health / Device tabs show live values.
+
+## Round 3 — Bluetooth drops when leaving the Connect screen
+
+With 0.4.1 and a fresh key, the band connected and data uploaded, but
+pressing **Back** on Connect over Bluetooth disconnected it.
+
+### Cause
+
+The BLE connection and upload bridge were held in refs inside `NodePage`,
+and its unmount cleanup called `bridge.stop()` and `connection.disconnect()`.
+Leaving the page unmounts it, so leaving the page ended the session.
+
+### Fix
+
+| Where | Change |
+|---|---|
+| `apps/web/src/lib/native/session.ts` (new) | One module-level Bluetooth session (`pair`, `disconnect`, `subscribe`, `getSession`). Survives client-side navigation; ends only on Disconnect or when the node drops. A manual Disconnect no longer reports "The node disconnected." |
+| `apps/web/src/app/node/page.tsx` | Reads the session via `useSyncExternalStore`; no teardown on unmount. Returning to the page shows the live connection and counts. |
+| `apps/web/src/app/device/page.tsx` | Button reads "Connected to lacs-… over Bluetooth" while a session is up. |
+
+`tsc --noEmit` and `npm run build -w apps/web` pass. Not yet tested on the
+phone.
+
+Limit: the session lives in the app's WebView. If Android kills the app in
+the background, or the app is swiped away, the link ends; reconnecting is
+manual.
 
 ## Open issue
 
