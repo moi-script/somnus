@@ -102,9 +102,13 @@ export class Bridge {
       });
 
       if (!res.ok) {
-        // 4xx will not become valid on retry; dropping keeps the queue moving
-        // instead of wedging every later frame behind a bad batch.
-        if (res.status >= 400 && res.status < 500) {
+        if (res.status === 401 || res.status === 403) {
+          // The frames are fine, the key is not. Keep them buffered so they
+          // upload once the token is fixed rather than being thrown away.
+          this.lastError = 'Server rejected the device key - re-add the band and paste the new key';
+        } else if (res.status >= 400 && res.status < 500) {
+          // Other 4xx will not become valid on retry; dropping keeps the queue
+          // moving instead of wedging every later frame behind a bad batch.
           await clearBatch(ids);
           this.lastError = `Server rejected a batch (${res.status})`;
         } else {

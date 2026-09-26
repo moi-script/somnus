@@ -42,7 +42,9 @@ export default function NodePage() {
       const ble = await import('@/lib/native/ble');
       const { Bridge, deviceToken, setDeviceToken } = await import('@/lib/native/sync');
 
-      const stored = deviceToken() ?? token.trim();
+      // The field is prefilled with the saved token, so what it holds now is
+      // what the user means; a stale saved one would be rejected on upload.
+      const stored = token.trim() || deviceToken();
       if (!stored) {
         setStatus({
           state: 'error',
