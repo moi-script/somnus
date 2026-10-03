@@ -102,6 +102,9 @@ export const api = {
 
   device: (deviceId: string) => request<Device>(`/devices/${deviceId}`),
 
+  removeDevice: (deviceId: string) =>
+    request<void>(`/devices/${deviceId}`, { method: 'DELETE' }),
+
   latest: (deviceId: string) => request<Reading>(`/devices/${deviceId}/latest`),
 
   readings: (deviceId: string, limit = 200) =>

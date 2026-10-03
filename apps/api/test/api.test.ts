@@ -94,6 +94,46 @@ describe('device claim', () => {
   });
 });
 
+describe('device remove', () => {
+  it('frees the id so another account can claim it, without the old history', async () => {
+    const first = await registerUser();
+    const oldToken = await claimDevice(first.token);
+    await ingest(oldToken, [telemetry(1)]);
+
+    const del = await request(app)
+      .delete('/api/v1/devices/lacs-7a3f21')
+      .set('Authorization', `Bearer ${first.token}`);
+    expect(del.status).toBe(204);
+
+    const stale = await ingest(oldToken, [telemetry(2)]);
+    expect(stale.status).toBe(401);
+
+    const second = await registerUser();
+    await claimDevice(second.token);
+    const readings = await request(app)
+      .get('/api/v1/devices/lacs-7a3f21/readings')
+      .set('Authorization', `Bearer ${second.token}`);
+    expect(readings.status).toBe(200);
+    expect(readings.body).toEqual([]);
+  });
+
+  it('will not let a stranger remove someone else’s device', async () => {
+    const owner = await registerUser();
+    await claimDevice(owner.token);
+
+    const stranger = await registerUser();
+    const res = await request(app)
+      .delete('/api/v1/devices/lacs-7a3f21')
+      .set('Authorization', `Bearer ${stranger.token}`);
+    expect(res.status).toBe(404);
+
+    const mine = await request(app)
+      .get('/api/v1/devices')
+      .set('Authorization', `Bearer ${owner.token}`);
+    expect(mine.body).toHaveLength(1);
+  });
+});
+
 describe('ingest', () => {
   it('stores telemetry and events from one batch', async () => {
     const { token } = await registerUser();

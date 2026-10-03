@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { claimDeviceSchema, deviceKindOf, readingsQuerySchema } from '@lacs/contracts';
-import { DeviceModel, EventModel, ReadingModel } from '../models/index.js';
+import {
+  CommandModel,
+  DeviceModel,
+  EventModel,
+  ReadingModel,
+  RoomFrameModel,
+} from '../models/index.js';
 import { mintIngestToken, requireOwnedDevice, requireUser } from '../middleware/auth.js';
 import { asyncHandler, validateBody } from '../middleware/helpers.js';
 
@@ -91,6 +97,27 @@ devicesRouter.get(
   asyncHandler(async (req, res) => {
     const device = await DeviceModel.findOne({ deviceId: req.params.deviceId }).lean();
     res.json(toDto(device as unknown as DeviceLean));
+  }),
+);
+
+/**
+ * Unclaiming frees the id so any account can claim it again, and revokes the
+ * ingest token with it. Everything the device recorded goes too: history is
+ * keyed by device id, so leaving it would hand it to whoever claims next.
+ */
+devicesRouter.delete(
+  '/:deviceId',
+  requireOwnedDevice,
+  asyncHandler(async (req, res) => {
+    const { deviceId } = req.params;
+    await Promise.all([
+      DeviceModel.deleteOne({ deviceId }),
+      ReadingModel.deleteMany({ deviceId }),
+      EventModel.deleteMany({ deviceId }),
+      CommandModel.deleteMany({ deviceId }),
+      RoomFrameModel.deleteMany({ deviceId }),
+    ]);
+    res.status(204).end();
   }),
 );
 

@@ -30,6 +30,7 @@ export default function DevicePage() {
   const [claimed, setClaimed] = useState<{ id: string; token: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   useEffect(() => setNative(isNative()), []);
 
@@ -48,6 +49,34 @@ export default function DevicePage() {
     },
     [newId, reload],
   );
+
+  // First tap arms, second tap removes. A device's whole history goes with it,
+  // so a single stray tap must not be enough.
+  const remove = useCallback(
+    async (deviceId: string) => {
+      if (removing !== deviceId) {
+        setRemoving(deviceId);
+        return;
+      }
+      setRemoving(null);
+      setBusy(true);
+      setMessage(null);
+      try {
+        await api.removeDevice(deviceId);
+        if (claimed?.id === deviceId) setClaimed(null);
+        setMessage(`Removed ${deviceId}. Any account can add it again now.`);
+        await reload();
+      } catch (err) {
+        setMessage((err as Error).message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [removing, claimed, reload],
+  );
+
+  const removeLabel = (deviceId: string) =>
+    removing === deviceId ? 'Tap again to remove, deletes its history' : 'Remove from account';
 
   const buzz = useCallback(
     async (pattern: BuzzPattern) => {
@@ -140,6 +169,14 @@ export default function DevicePage() {
                 </p>
               )}
               {active.fw && <p className="mt-1">Firmware {active.fw}</p>}
+              <button
+                type="button"
+                className="btn mt-4 text-heart"
+                disabled={busy}
+                onClick={() => void remove(active.deviceId)}
+              >
+                {removeLabel(active.deviceId)}
+              </button>
             </div>
           </section>
         )}
@@ -192,9 +229,19 @@ export default function DevicePage() {
               The radar and bulb talk to the server over WiFi on their own, so
               no phone is needed. {room.fw && `Firmware ${room.fw}.`}
             </p>
-            <Link href="/sleep/" className="btn mt-4 inline-block">
-              Light controls and nights
-            </Link>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/sleep/" className="btn inline-block">
+                Light controls and nights
+              </Link>
+              <button
+                type="button"
+                className="btn text-heart"
+                disabled={busy}
+                onClick={() => void remove(room.deviceId)}
+              >
+                {removeLabel(room.deviceId)}
+              </button>
+            </div>
           </section>
         )}
 
