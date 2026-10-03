@@ -175,16 +175,6 @@ export function MailIcon(p: IconProps) {
   );
 }
 
-export function InfoIcon(p: IconProps) {
-  return (
-    <Svg {...p}>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 11v5" />
-      <circle cx="12" cy="8.2" r="0.7" fill="currentColor" stroke="none" />
-    </Svg>
-  );
-}
-
 export function LinkIcon(p: IconProps) {
   return (
     <Svg {...p}>

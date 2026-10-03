@@ -12,7 +12,6 @@ import { isNative } from '@/lib/platform';
 import {
   ChevronIcon,
   HelpIcon,
-  InfoIcon,
   LinkIcon,
   MailIcon,
   PaletteIcon,
@@ -38,7 +37,7 @@ export default function MePage() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [theme, setThemeState] = useState<Theme>('system');
   const [targets, setTargets] = useState<Targets>({ steps: 8000, sleepHours: 8 });
-  const [panel, setPanel] = useState<'targets' | 'theme' | 'faq' | 'about' | null>(null);
+  const [panel, setPanel] = useState<'targets' | 'theme' | 'faq' | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -228,27 +227,6 @@ export default function MePage() {
             <span className="flex-1 font-medium">Send feedback</span>
             <ChevronIcon className="h-5 w-5 text-muted" />
           </a>
-
-          <button type="button" className="row border-t border-line" onClick={() => setPanel(panel === 'about' ? null : 'about')}>
-            <InfoIcon className="h-5 w-5 text-muted" />
-            <span className="flex-1 font-medium">About</span>
-            <ChevronIcon className="h-5 w-5 text-muted" />
-          </button>
-
-          {panel === 'about' && (
-            <div className="border-t border-line bg-canvas/50 px-5 py-5 text-sm text-muted">
-              <p>
-                Somnus reads a pulse sensor, a skin response sensor and an
-                accelerometer from a small board worn on the body, and keeps the
-                readings on your phone until they can be uploaded.
-              </p>
-              <p className="mt-3">
-                Built as a thesis project. Not a medical device, and not tested
-                for accuracy against one.
-              </p>
-              {active?.fw && <p className="mt-3">Band firmware {active.fw}</p>}
-            </div>
-          )}
         </section>
 
         <Link href="/download/" className="card row rounded-card">
