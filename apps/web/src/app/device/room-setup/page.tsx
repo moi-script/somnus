@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  SetupLost,
+  SetupRefused,
+  SetupStaleBond,
+  SetupTimeout,
   describeResult,
   mergeNetworks,
   type SetupHello,
@@ -32,7 +36,16 @@ type Step =
 
 /** Words for anything the Bluetooth side throws. */
 async function errorText(err: unknown): Promise<string> {
-  const { SetupRefused, SetupTimeout } = await import('@/lib/native/roomSetup');
+  const { SetupPairingFailed } = await import('@/lib/native/roomSetup');
+  if (err instanceof SetupStaleBond) {
+    // The unit's memory was erased, but Android still thinks they are
+    // paired, so every encrypted write fails.
+    return 'The phone and the room unit no longer trust each other. In Android Bluetooth settings, forget Somnus-room-…, then search again.';
+  }
+  if (err instanceof SetupPairingFailed) {
+    return 'Pairing did not finish. Tap Search again, and tap Pair when Android asks.';
+  }
+  if (err instanceof SetupLost) return 'The room unit disconnected. Search again.';
   if (err instanceof SetupTimeout) {
     return 'The room unit did not answer. Keep the phone close, and hold its BOOT button for 3 seconds if it is already online.';
   }
@@ -42,12 +55,8 @@ async function errorText(err: unknown): Promise<string> {
       : 'The room unit did not understand the app. Update its firmware.';
   }
   const message = (err as Error)?.message ?? String(err);
+  // Only the device picker is left to cancel; pairing is SetupPairingFailed.
   if (/cancel/i.test(message)) return 'No room unit was chosen.';
-  // A unit whose memory was erased no longer knows this phone, but Android
-  // still thinks they are paired, so every encrypted write fails.
-  if (/auth|encrypt|bond|insufficient/i.test(message)) {
-    return 'The phone and the room unit no longer trust each other. In Android Bluetooth settings, forget Somnus-room-…, then search again.';
-  }
   return message;
 }
 
@@ -86,7 +95,8 @@ export default function RoomSetupPage() {
     try {
       await current.scan((n) => setNetworks((list) => mergeNetworks(list, n)));
     } catch (err) {
-      setMessage(await errorText(err));
+      // A link that has since dropped already sent the wizard back to Find.
+      if (link.current === current) setMessage(await errorText(err));
     } finally {
       setScanning(false);
     }
@@ -155,6 +165,7 @@ export default function RoomSetupPage() {
         const result = await current.join({ ssid, password, server: API_URL, key }, (stage) =>
           setStep({ name: 'connecting', ssid, stage }),
         );
+        if (link.current !== current) return;
         const outcome = describeResult(result);
         setStep({ name: 'result', outcome });
         if (outcome.ok) {
@@ -163,6 +174,9 @@ export default function RoomSetupPage() {
           link.current = null;
         }
       } catch (err) {
+        // A link that has since dropped already sent the wizard back to Find;
+        // a late failure from it must not pull the user out of a new attempt.
+        if (link.current !== current) return;
         setStep({
           name: 'result',
           outcome: {

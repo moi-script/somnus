@@ -2,13 +2,10 @@ import {
   SETUP_RX,
   SETUP_SERVICE,
   SETUP_TX,
-  SetupLineParser,
-  encodeSetupRequest,
+  SetupClient,
   type SetupHello,
   type SetupJoin,
   type SetupNetwork,
-  type SetupReply,
-  type SetupRequest,
   type SetupResult,
 } from '@lacs/contracts';
 import { loadBleClient, negotiateMtu, type ScannedDevice } from './ble';
@@ -17,21 +14,12 @@ import { loadBleClient, negotiateMtu, type ScannedDevice } from './ble';
  * Bluetooth link to a room unit in setup mode.
  *
  * Separate from the band session: it lives only while the setup wizard is
- * open, and speaks the setup messages from @lacs/contracts, not frames.
+ * open. The requests, timeouts and failure rules are SetupClient's, in
+ * @lacs/contracts; this file only moves bytes.
  */
 
-const HELLO_MS = 5_000;
-const SCAN_MS = 15_000;
-/** 20 s for Wi-Fi plus up to 60 s for a sleeping server, plus slack. */
-const JOIN_MS = 90_000;
-
-export class SetupTimeout extends Error {}
-
-export class SetupRefused extends Error {
-  constructor(readonly reason: 'busy' | 'bad_message') {
-    super(reason);
-  }
-}
+/** Android's Pair prompt was cancelled, timed out, or pairing failed. */
+export class SetupPairingFailed extends Error {}
 
 export interface SetupLink {
   device: ScannedDevice;
@@ -52,93 +40,53 @@ export async function openSetup(device: ScannedDevice, onLost: () => void): Prom
   const BleClient = await loadBleClient();
   const { deviceId } = device;
   let closing = false;
+  let client: SetupClient | null = null;
 
   await BleClient.connect(deviceId, () => {
-    if (!closing) onLost();
+    if (closing) return;
+    // Fail whatever is in flight at once, then tell the page.
+    client?.lost();
+    onLost();
   });
-  await negotiateMtu(deviceId);
 
-  // The unit refuses unencrypted writes. Pairing encrypts the link; Android
-  // shows one "Pair with Somnus-room-...?" prompt the first time.
-  if (!(await BleClient.isBonded(deviceId))) await BleClient.createBond(deviceId);
+  try {
+    await negotiateMtu(deviceId);
 
-  const parser = new SetupLineParser();
-  const decoder = new TextDecoder();
-  const listeners = new Set<(reply: SetupReply) => void>();
-
-  await BleClient.startNotifications(deviceId, SETUP_SERVICE, SETUP_TX, (value) => {
-    for (const reply of parser.push(decoder.decode(value))) {
-      for (const listener of [...listeners]) listener(reply);
+    // The unit refuses unencrypted writes. Pairing encrypts the link; Android
+    // shows one "Pair with Somnus-room-...?" prompt the first time.
+    const wasBonded = await BleClient.isBonded(deviceId);
+    if (!wasBonded) {
+      try {
+        await BleClient.createBond(deviceId);
+      } catch (err) {
+        throw new SetupPairingFailed((err as Error)?.message ?? String(err));
+      }
     }
-  });
 
-  const encoder = new TextEncoder();
+    const encoder = new TextEncoder();
+    const connected = new SetupClient(async (line) => {
+      const bytes = encoder.encode(line);
+      await BleClient.write(deviceId, SETUP_SERVICE, SETUP_RX, new DataView(bytes.buffer));
+    }, wasBonded);
 
-  /**
-   * Sends one request and resolves with the first reply `pick` accepts.
-   * The listener goes in before the write, so a fast answer is never missed.
-   */
-  function ask<T>(
-    req: SetupRequest,
-    pick: (reply: SetupReply) => T | undefined,
-    ms: number,
-    onOther?: (reply: SetupReply) => void,
-  ): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const done = () => {
-        clearTimeout(timer);
-        listeners.delete(listener);
-      };
-      const timer = setTimeout(() => {
-        done();
-        reject(new SetupTimeout());
-      }, ms);
-      const listener = (reply: SetupReply) => {
-        if (reply.op === 'error') {
-          done();
-          reject(new SetupRefused(reply.reason));
-          return;
-        }
-        onOther?.(reply);
-        const value = pick(reply);
-        if (value !== undefined) {
-          done();
-          resolve(value);
-        }
-      };
-      listeners.add(listener);
-
-      const bytes = encoder.encode(encodeSetupRequest(req));
-      BleClient.write(deviceId, SETUP_SERVICE, SETUP_RX, new DataView(bytes.buffer)).catch((err) => {
-        done();
-        reject(err);
-      });
+    await BleClient.startNotifications(deviceId, SETUP_SERVICE, SETUP_TX, (value) => {
+      connected.receive(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
     });
+    client = connected;
+  } catch (err) {
+    // Never leave a half-open link behind: its later drop would replace the
+    // real error with "disconnected".
+    closing = true;
+    await BleClient.disconnect(deviceId).catch(() => {});
+    throw err;
   }
 
+  const ready = client;
   return {
     device,
-    hello: () => ask({ op: 'hello' }, (r) => (r.op === 'hello' ? r : undefined), HELLO_MS),
-    scan: async (onNetwork) => {
-      await ask(
-        { op: 'scan' },
-        (r) => (r.op === 'scan_done' ? true : undefined),
-        SCAN_MS,
-        (r) => {
-          if (r.op === 'net') onNetwork(r);
-        },
-      );
-    },
-    join: (req, onStage) =>
-      ask(
-        { op: 'join', ...req },
-        (r) => (r.op === 'result' ? r : undefined),
-        JOIN_MS,
-        (r) => {
-          if (r.op === 'joining') onStage('join');
-          if (r.op === 'checking') onStage('server');
-        },
-      ),
+    hello: () => ready.hello(),
+    scan: (onNetwork) => ready.scan(onNetwork),
+    join: (req, onStage) => ready.join(req, onStage),
     async close() {
       closing = true;
       await BleClient.stopNotifications(deviceId, SETUP_SERVICE, SETUP_TX).catch(() => {});

@@ -5,3 +5,4 @@ export * from './parse.js';
 export * from './api.js';
 export * from './night.js';
 export * from './setup.js';
+export * from './setupClient.js';
