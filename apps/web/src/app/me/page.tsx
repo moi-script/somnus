@@ -26,8 +26,8 @@ interface Targets {
 }
 
 const THEMES: { value: Theme; label: string; hint: string }[] = [
-  { value: 'soft', label: 'Soft', hint: 'Pale and bright' },
-  { value: 'night', label: 'Night', hint: 'Easier in the dark' },
+  { value: 'dark', label: 'Dark', hint: 'Easier at night' },
+  { value: 'light', label: 'Light', hint: 'Pale and bright' },
   { value: 'system', label: 'Match phone', hint: 'Follows your settings' },
 ];
 
@@ -35,7 +35,7 @@ export default function MePage() {
   const router = useRouter();
   const { active } = useDevice();
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('dark');
   const [targets, setTargets] = useState<Targets>({ steps: 8000, sleepHours: 8 });
   const [panel, setPanel] = useState<'targets' | 'theme' | 'faq' | null>(null);
 

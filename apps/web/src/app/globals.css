@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* Soft, the default. Cool porcelain rather than warm cream. */
+  /* Light: the option. Same hues as dark, deepened to hold up on white. */
   :root {
     --canvas: 244 246 251;
     --card: 255 255 255;
@@ -12,32 +12,37 @@
     --line: 231 235 243;
     --shadow: 23 32 46;
 
-    --heart: 255 107 138;
-    --skin: 245 165 36;
-    --motion: 46 211 198;
-    --sleep: 124 108 240;
-    --oxygen: 76 154 255;
-    --alarm: 244 82 92;
+    --primary: 37 99 235;
+    --good: 20 184 166;
+    --heart: 225 29 99;
+    --oxygen: 124 58 237;
+    --stress: 5 150 105;
+    --sleep: 79 70 229;
+    --skin: 217 119 6;
+    --motion: 13 148 136;
+    --alarm: 225 29 72;
 
     color-scheme: light;
   }
 
-  /* Night. Same hues, lifted for legibility on a dark ground: the pastels
-     used on white turn muddy once the background stops reflecting light. */
+  /* Dark: the default, from the mockups. Deep navy with a faint blue glow. */
   :root[data-theme='dark'] {
-    --canvas: 15 20 30;
-    --card: 23 30 43;
+    --canvas: 11 16 32;
+    --card: 18 26 46;
     --ink: 233 238 246;
     --muted: 138 150 171;
-    --line: 38 48 66;
+    --line: 30 42 74;
     --shadow: 0 0 0;
 
-    --heart: 255 129 156;
-    --skin: 255 187 77;
-    --motion: 78 226 213;
-    --sleep: 152 138 250;
-    --oxygen: 116 176 255;
-    --alarm: 255 116 125;
+    --primary: 59 130 246;
+    --good: 46 230 197;
+    --heart: 255 92 138;
+    --oxygen: 167 139 250;
+    --stress: 52 211 153;
+    --sleep: 99 102 241;
+    --skin: 245 158 11;
+    --motion: 45 212 191;
+    --alarm: 244 63 94;
 
     color-scheme: dark;
   }
@@ -58,7 +63,11 @@
 
 @layer components {
   .card {
-    @apply rounded-card bg-card shadow-soft;
+    @apply rounded-card border border-line bg-card shadow-soft;
+  }
+
+  :root[data-theme='dark'] .card {
+    box-shadow: 0 0 0 1px rgb(var(--primary) / 0.08), 0 8px 24px rgb(var(--primary) / 0.06);
   }
 
   .field {
@@ -73,7 +82,7 @@
   }
 
   .btn-primary {
-    @apply rounded-pill bg-ink px-5 py-3 font-semibold text-canvas
+    @apply rounded-pill bg-primary px-5 py-3 font-semibold text-white
            transition-opacity hover:opacity-90 disabled:opacity-40;
   }
 

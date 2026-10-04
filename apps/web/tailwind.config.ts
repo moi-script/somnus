@@ -23,6 +23,9 @@ const config: Config = {
         sleep: token('sleep'),
         oxygen: token('oxygen'),
         alarm: token('alarm'),
+        primary: token('primary'),
+        good: token('good'),
+        stress: token('stress'),
       },
       fontFamily: {
         sans: ['var(--font-manrope)', 'system-ui', 'sans-serif'],
@@ -34,6 +37,7 @@ const config: Config = {
       boxShadow: {
         soft: '0 2px 16px rgb(var(--shadow) / 0.06)',
         lift: '0 8px 28px rgb(var(--shadow) / 0.10)',
+        glow: '0 0 16px rgb(var(--primary) / 0.35)',
       },
     },
   },
