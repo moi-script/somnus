@@ -141,7 +141,7 @@ Tiles: Occupancy (Occupied/Empty), Presence (Detected/Not detected), Bed Exit ("
 
 - `packages/contracts` (vitest): `presenceSegments` — carry-in from `before`, empty window, gaps → `none`, clipping, `now` inside the window, never-reported unit.
 - `apps/web` (vitest added, pure functions only): every function in §6.4.
-- `apps/api` (vitest, local MongoDB): `/room/presence` — window and `before`, oldest-first order, other owner → 404/403 as `/room/latest` does, band device refused, invalid `minutes` → 400.
+- `apps/api` (vitest, local MongoDB): `/room/presence` — window and `before`, oldest-first order, guarded by the same `roomOnly` middleware as `/room/latest` (another owner and a band device get the same responses it gives), invalid `minutes` → 400.
 - Typecheck and build list every route in §5, including forwarding pages.
 - `scripts/seed-demo.mjs`: registers a demo account on a **localhost** API (refuses any other host), claims a band and a room unit, and ingests a night: presence with two bed exits, light changes, and band frames (HR, SpO₂, GSR, IMU). Used for screenshots and for the defense demo.
 - Screenshots of every route at 390 px wide, dark and light, compared side by side with the mockups and shown to the user before A is called done.
