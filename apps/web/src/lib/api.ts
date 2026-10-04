@@ -7,6 +7,8 @@ import type {
   NightSummary,
   QueuedCommand,
   Reading,
+  RoomPresence,
+  SeriesPoint,
   StoredEvent,
 } from '@lacs/contracts';
 
@@ -123,6 +125,14 @@ export const api = {
     request<QueuedCommand[]>(`/devices/${deviceId}/commands`),
 
   roomLatest: (deviceId: string) => request<RoomLatest>(`/devices/${deviceId}/room/latest`),
+
+  roomPresence: (deviceId: string, minutes: 60 | 360 | 1440) =>
+    request<RoomPresence>(`/devices/${deviceId}/room/presence?minutes=${minutes}`),
+
+  readingSeries: (deviceId: string, from: Date, to: Date, bucketSec = 300) =>
+    request<SeriesPoint[]>(
+      `/devices/${deviceId}/readings/series?from=${from.toISOString()}&to=${to.toISOString()}&bucketSec=${bucketSec}`,
+    ),
 
   night: (deviceId: string, date: string) =>
     request<NightSummary>(`/devices/${deviceId}/nights/${date}?tz=${tz()}`),

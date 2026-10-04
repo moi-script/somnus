@@ -6,6 +6,7 @@ import {
   nightWindow,
   summarizeNight,
   NIGHT,
+  roomPresenceQuerySchema,
   type LightSample,
   type LightSource,
   type LightState,
@@ -96,6 +97,28 @@ roomRouter.get(
         ? { state: light.state, source: light.source, at: light.recordedAt.toISOString() }
         : null,
     });
+  }),
+);
+
+/** Presence over the last hour, 6 hours or day, plus the state just before it. */
+roomRouter.get(
+  '/:deviceId/room/presence',
+  ...roomOnly,
+  asyncHandler(async (req, res) => {
+    const query = roomPresenceQuerySchema.safeParse(req.query);
+    if (!query.success) return badRequest(res, query.error.issues);
+    const deviceId = req.params.deviceId!;
+    const from = new Date(Date.now() - query.data.minutes * 60_000);
+    const [before, frames] = await Promise.all([
+      RoomFrameModel.findOne({ deviceId, t: 'presence', recordedAt: { $lt: from } })
+        .sort({ recordedAt: -1 })
+        .lean<RoomFrameLean>(),
+      RoomFrameModel.find({ deviceId, t: 'presence', recordedAt: { $gte: from } })
+        .sort({ recordedAt: 1 })
+        .lean<RoomFrameLean[]>(),
+    ]);
+    const point = (f: RoomFrameLean) => ({ present: Boolean(f.present), at: f.recordedAt.toISOString() });
+    res.json({ before: before ? point(before) : null, frames: frames.map(point) });
   }),
 );
 

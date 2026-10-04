@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { claimDeviceSchema, deviceKindOf, readingsQuerySchema } from '@lacs/contracts';
+import { claimDeviceSchema, deviceKindOf, readingSeriesQuerySchema, readingsQuerySchema } from '@lacs/contracts';
 import {
   CommandModel,
   DeviceModel,
@@ -162,6 +162,83 @@ devicesRouter.get(
     // data without a second sort on the client.
     const readings = await ReadingModel.find(filter).sort({ recordedAt: -1, seq: -1 }).limit(limit).lean();
     res.json(readings.reverse());
+  }),
+);
+
+/**
+ * The band's readings over up to a week, averaged per bucket.
+ *
+ * At 5 readings a second a day is ~400k rows; charts need a few hundred
+ * points. Unusable readings (no finger, invalid SpO2, a sensor not answering)
+ * are left out of each mean rather than dragging it to zero.
+ */
+devicesRouter.get(
+  '/:deviceId/readings/series',
+  requireOwnedDevice,
+  asyncHandler(async (req, res) => {
+    const parsed = readingSeriesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'validation_failed',
+        issues: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+      });
+      return;
+    }
+    const { from, to, bucketSec } = parsed.data;
+    const bucketMs = bucketSec * 1000;
+    const at = { $toLong: '$recordedAt' };
+
+    const rows = await ReadingModel.aggregate<{
+      _id: number;
+      bpm: number | null;
+      spo2: number | null;
+      gsr: number | null;
+      motion: number | null;
+    }>([
+      { $match: { deviceId: req.params.deviceId, recordedAt: { $gte: new Date(from), $lt: new Date(to) } } },
+      {
+        $group: {
+          _id: { $subtract: [at, { $mod: [at, bucketMs] }] },
+          bpm: {
+            $avg: {
+              $cond: [
+                { $and: ['$ppg.ok', '$ppg.finger'] },
+                {
+                  $let: {
+                    vars: { b: { $cond: [{ $gt: ['$ppg.bpmAvg', 0] }, '$ppg.bpmAvg', '$ppg.bpm'] } },
+                    in: { $cond: [{ $gt: ['$$b', 0] }, '$$b', null] },
+                  },
+                },
+                null,
+              ],
+            },
+          },
+          spo2: { $avg: { $cond: [{ $eq: ['$ppg.spo2Valid', true] }, '$ppg.spo2', null] } },
+          gsr: { $avg: { $cond: [{ $eq: ['$gsr.ok', true] }, '$gsr.raw', null] } },
+          motion: {
+            $avg: { $cond: [{ $eq: ['$imu.ok', true] }, { $abs: { $subtract: ['$imu.mag', 1] } }, null] },
+          },
+        },
+      },
+      {
+        $match: {
+          $or: [{ bpm: { $ne: null } }, { spo2: { $ne: null } }, { gsr: { $ne: null } }, { motion: { $ne: null } }],
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const round = (v: number | null, digits: number) =>
+      v === null ? null : Math.round(v * 10 ** digits) / 10 ** digits;
+    res.json(
+      rows.map((r) => ({
+        at: new Date(r._id).toISOString(),
+        bpm: round(r.bpm, 0),
+        spo2: round(r.spo2, 0),
+        gsr: round(r.gsr, 0),
+        motion: round(r.motion, 3),
+      })),
+    );
   }),
 );
 

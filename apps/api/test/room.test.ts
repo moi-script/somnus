@@ -177,3 +177,58 @@ describe('nights', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('room presence window', () => {
+  const HOUR = 60 * MIN;
+  const NEWEST = 100_000_000;
+
+  /** One batch, so ingest back-dates each frame by its ms distance from the newest. */
+  async function seed(roomToken: string) {
+    await ingest(roomToken, [
+      presence(1, NEWEST - 2 * HOUR, true),
+      presence(2, NEWEST - 30 * MIN, true),
+      presence(3, NEWEST - 10 * MIN, false),
+      presence(4, NEWEST, false),
+    ]);
+  }
+
+  it('returns the frames in the window oldest first, and the one before it', async () => {
+    const { token, roomToken } = await setup();
+    await seed(roomToken);
+    const res = await asUser(token).get(`/devices/${ROOM_ID}/room/presence?minutes=60`);
+    expect(res.status).toBe(200);
+    expect(res.body.before.present).toBe(true);
+    expect(res.body.frames.map((f: { present: boolean }) => f.present)).toEqual([true, false, false]);
+    const times = res.body.frames.map((f: { at: string }) => Date.parse(f.at));
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    expect(Date.parse(res.body.before.at)).toBeLessThan(times[0]);
+  });
+
+  it('defaults to an hour and has no "before" for a unit that just started', async () => {
+    const { token, roomToken } = await setup();
+    await ingest(roomToken, [presence(1, 5_000, true)]);
+    const res = await asUser(token).get(`/devices/${ROOM_ID}/room/presence`);
+    expect(res.status).toBe(200);
+    expect(res.body.before).toBeNull();
+    expect(res.body.frames).toHaveLength(1);
+  });
+
+  it('only accepts 60, 360 or 1440 minutes', async () => {
+    const { token } = await setup();
+    const res = await asUser(token).get(`/devices/${ROOM_ID}/room/presence?minutes=7`);
+    expect(res.status).toBe(400);
+  });
+
+  it('answers a band and another account exactly as /room/latest does', async () => {
+    const { token } = await setup();
+    const band = await asUser(token).get('/devices/lacs-7a3f21/room/presence');
+    const bandLatest = await asUser(token).get('/devices/lacs-7a3f21/room/latest');
+    expect(band.status).toBe(bandLatest.status);
+
+    const other = await registerUser();
+    const theirs = await asUser(other.token).get(`/devices/${ROOM_ID}/room/presence`);
+    const theirsLatest = await asUser(other.token).get(`/devices/${ROOM_ID}/room/latest`);
+    expect(theirs.status).not.toBe(200);
+    expect(theirs.status).toBe(theirsLatest.status);
+  });
+});
