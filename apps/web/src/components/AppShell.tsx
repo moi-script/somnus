@@ -1,46 +1,35 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LATEST_APK, useUpdate } from '@/lib/update';
-import {
-  BluetoothIcon,
-  ChipIcon,
-  HeartIcon,
-  MoonIcon,
-  PersonIcon,
-  RunIcon,
-} from './Icons';
+import { BedIcon, HeartIcon, HomeIcon, MenuIcon, MoonIcon } from './Icons';
 
 const TABS = [
-  { href: '/health/', label: 'Health', Icon: HeartIcon },
+  { href: '/home/', label: 'Home', Icon: HomeIcon },
   { href: '/sleep/', label: 'Sleep', Icon: MoonIcon },
-  { href: '/exercise/', label: 'Exercise', Icon: RunIcon },
-  { href: '/device/', label: 'Device', Icon: ChipIcon },
-  { href: '/me/', label: 'Me', Icon: PersonIcon },
+  { href: '/health/', label: 'Health', Icon: HeartIcon },
+  { href: '/bed/', label: 'Bed', Icon: BedIcon },
+  { href: '/more/', label: 'More', Icon: MenuIcon },
 ];
 
-interface AppShellProps {
-  title: string;
-  subtitle?: string;
-  /** Null when no node has been added yet. */
-  deviceName?: string | null;
-  connected?: boolean;
-  children: React.ReactNode;
-}
-
 /**
- * Page frame: a header that always answers "is the band connected", and the
- * tab bar. Tabs sit at the bottom on a phone where a thumb reaches them, and
- * move to the top on wider screens where the bottom edge is far away.
+ * Page frame for the five tabs. Tabs sit at the bottom on a phone where a
+ * thumb reaches them, and along the top on wider screens. `action` is the
+ * header's right side: a status pill, a settings button.
  */
 export function AppShell({
   title,
   subtitle,
-  deviceName,
-  connected = false,
+  action,
   children,
-}: AppShellProps) {
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const { update, showBanner, dismiss } = useUpdate();
 
@@ -48,29 +37,13 @@ export function AppShell({
     <div className="min-h-screen pb-28 sm:pb-10">
       <header className="mx-auto max-w-3xl px-5 pt-6 sm:px-8 sm:pt-10">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
             {subtitle && <p className="mt-1 text-muted">{subtitle}</p>}
           </div>
-
-          <Link
-            href="/device/"
-            className="flex shrink-0 items-center gap-2 rounded-pill bg-card px-3 py-2 shadow-soft"
-          >
-            <BluetoothIcon
-              className={`h-4 w-4 ${connected ? 'text-motion' : 'text-muted'}`}
-            />
-            <span className="max-w-[9rem] truncate text-sm font-medium">
-              {deviceName ?? 'No band yet'}
-            </span>
-            <span
-              className={`h-2 w-2 rounded-full ${connected ? 'bg-motion' : 'bg-line'}`}
-              aria-label={connected ? 'Connected' : 'Not connected'}
-            />
-          </Link>
+          {action}
         </div>
 
-        {/* Wide screens: tabs under the header, where they read as navigation. */}
         <nav className="mt-6 hidden gap-1 border-b border-line sm:flex">
           {TABS.map(({ href, label }) => {
             const active = pathname?.startsWith(href);
@@ -79,9 +52,7 @@ export function AppShell({
                 key={href}
                 href={href}
                 className={`-mb-px border-b-2 px-4 py-3 font-medium transition-colors ${
-                  active
-                    ? 'border-ink text-ink'
-                    : 'border-transparent text-muted hover:text-ink'
+                  active ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'
                 }`}
               >
                 {label}
@@ -96,19 +67,12 @@ export function AppShell({
           <div className="card mb-4 flex items-center gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
               <p className="font-medium">Somnus {update.version} is out</p>
-              <p className="text-sm text-muted">
-                Install it over this one. Your readings stay on the phone.
-              </p>
+              <p className="text-sm text-muted">Install it over this one. Your readings stay on the phone.</p>
             </div>
             <a href={LATEST_APK} className="btn-primary shrink-0 !py-2 text-sm">
               Update
             </a>
-            <button
-              type="button"
-              onClick={dismiss}
-              aria-label="Not now"
-              className="shrink-0 px-1 text-xl leading-none text-muted"
-            >
+            <button type="button" onClick={dismiss} aria-label="Not now" className="shrink-0 px-1 text-xl leading-none text-muted">
               ×
             </button>
           </div>
@@ -116,7 +80,6 @@ export function AppShell({
         {children}
       </main>
 
-      {/* Phones: thumb-reachable bar pinned to the bottom. */}
       <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-card/95 backdrop-blur sm:hidden">
         <div className="mx-auto flex max-w-3xl">
           {TABS.map(({ href, label, Icon }) => {
@@ -127,7 +90,7 @@ export function AppShell({
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={`flex flex-1 flex-col items-center gap-1 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-xs font-medium transition-colors ${
-                  active ? 'text-ink' : 'text-muted'
+                  active ? 'text-primary' : 'text-muted'
                 }`}
               >
                 <Icon className={`h-6 w-6 ${active ? '' : 'opacity-70'}`} />

@@ -8,7 +8,7 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getToken() ? '/health/' : '/login/');
+    router.replace(getToken() ? '/home/' : '/login/');
   }, [router]);
 
   return <p className="text-muted">Loading</p>;

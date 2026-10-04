@@ -21,7 +21,7 @@ export default function LoginPage() {
         ? await api.login(email, password)
         : await api.register(email, password);
       setToken(res.token);
-      router.push('/health/');
+      router.push('/home/');
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);

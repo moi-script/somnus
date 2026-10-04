@@ -61,8 +61,6 @@ export default function SleepPage() {
     <AppShell
       title="Sleep"
       subtitle={room ? label : 'Your room overnight'}
-      deviceName={active?.name ?? null}
-      connected={active?.online ?? false}
     >
       {noRoom && (
         <section className="card px-6 py-6">
@@ -80,7 +78,7 @@ export default function SleepPage() {
             It senses the room, not you, so it cannot tell sleep from lying
             awake.
           </p>
-          <Link href="/device/" className="btn-primary mt-5 inline-block">
+          <Link href="/more/devices/room-setup/" className="btn-primary mt-5 inline-block">
             Add the room unit
           </Link>
         </section>

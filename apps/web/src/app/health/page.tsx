@@ -132,8 +132,6 @@ export default function HealthPage() {
     <AppShell
       title="Health"
       subtitle={today}
-      deviceName={active?.name ?? null}
-      connected={state === 'live'}
     >
       {noDevice && (
         <section className="card px-6 py-6">
@@ -142,7 +140,7 @@ export default function HealthPage() {
             Switch the node on and read the id from its first line, something
             like lacs-7a3f21. Once it is added, readings show up here.
           </p>
-          <Link href="/device/" className="btn-primary mt-4 inline-block">
+          <Link href="/more/devices/" className="btn-primary mt-4 inline-block">
             Add a band
           </Link>
         </section>
@@ -350,7 +348,7 @@ export default function HealthPage() {
               <div className="flex items-baseline justify-between px-6 pt-5">
                 <h2 className="text-lg font-semibold">Recent</h2>
                 <Link
-                  href={`/history/?id=${active?.deviceId ?? ''}`}
+                  href={`/more/history/?id=${active?.deviceId ?? ''}`}
                   className="text-sm font-medium text-muted hover:text-ink"
                 >
                   See all

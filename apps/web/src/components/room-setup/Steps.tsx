@@ -247,7 +247,7 @@ export function ResultStep({
           </button>
         )}
         <button type="button" className={outcome.backTo ? 'btn' : 'btn-primary'} onClick={onDone}>
-          {outcome.ok ? 'Go to Sleep' : 'Done'}
+          {outcome.ok ? 'Go to Bed' : 'Done'}
         </button>
       </div>
     </section>
