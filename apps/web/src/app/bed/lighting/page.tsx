@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Command } from '@lacs/contracts';
 import { useDevice } from '@/lib/useDevice';
+import { brightnessCommand, modeAfter, type LightMode } from '@/lib/lightControl';
 import { useLightCommand } from '@/lib/useLightCommand';
 import { useRoom } from '@/lib/useRoom';
 import { useTabParam } from '@/lib/useTabParam';
@@ -26,7 +27,14 @@ const SWATCHES: { label: string; css: string; command: LightCmd }[] = [
 function LightingView() {
   const { room, devices } = useDevice();
   const live = useRoom(room?.deviceId ?? null);
-  const { send, message } = useLightCommand(room?.deviceId ?? null, live.lastAck);
+  const light = useLightCommand(room?.deviceId ?? null, live.lastAck);
+  const message = light.message;
+  const [mode, setMode] = useState<LightMode>(live.light?.mode === 'colour' ? 'colour' : 'white');
+  // Remember what was just asked for: the bulb's own report lags a poll and an ack.
+  const send = (command: LightCmd | Command) => {
+    if (command.cmd === 'light') setMode((m) => modeAfter(command, m));
+    return light.send(command);
+  };
   const [tab, setTab] = useTabParam(['manual', 'adaptive'] as const, 'manual');
   const colour = live.light?.mode === 'colour' ? live.light.color : null;
   const [hue, setHue] = useState(colour?.h ?? 30);
@@ -37,6 +45,7 @@ function LightingView() {
   // Follow the bulb when its state arrives or changes elsewhere.
   useEffect(() => {
     if (!live.light) return;
+    setMode(live.light.mode === 'colour' ? 'colour' : 'white');
     if (live.light.mode === 'colour' && live.light.color) {
       setHue(live.light.color.h);
       setSat(live.light.color.s);
@@ -56,11 +65,7 @@ function LightingView() {
   const sendBrightness = (v: number) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      void send(
-        live.light?.mode === 'colour'
-          ? { cmd: 'light', on: true, color: { h: hue, s: sat, v } }
-          : { cmd: 'light', on: true, bright: v, temp: live.light?.temp ?? 20 },
-      );
+      void send(brightnessCommand(mode, hue, sat, v, live.light?.temp ?? 20));
     }, 500);
   };
 
@@ -92,7 +97,7 @@ function LightingView() {
         <SectionCard>
           <ColorWheel
             hue={hue}
-            sat={sat}
+            sat={mode === 'white' ? 0 : sat}
             onChange={(h, s) => {
               setHue(h);
               setSat(s);

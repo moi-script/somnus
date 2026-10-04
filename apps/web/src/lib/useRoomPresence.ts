@@ -17,7 +17,9 @@ export const PRESENCE_KINDS = {
  * itself slides every 15 s.
  */
 export function useRoomPresence(deviceId: string | null, minutes: 60 | 360 | 1440, present: boolean | null) {
-  const [data, setData] = useState<RoomPresence | null>(null);
+  // Tagged with the window it belongs to, so a switch never draws old data on new bounds.
+  const [loaded, setLoaded] = useState<{ key: string; data: RoomPresence } | null>(null);
+  const key = `${deviceId}:${minutes}`;
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function useRoomPresence(deviceId: string | null, minutes: 60 | 360 | 144
     const load = () =>
       api
         .roomPresence(deviceId, minutes)
-        .then((r) => !cancelled && setData(r))
+        .then((r) => !cancelled && setLoaded({ key, data: r }))
         .catch(() => undefined);
     void load();
     const every = setInterval(load, 30_000);
@@ -39,10 +41,11 @@ export function useRoomPresence(deviceId: string | null, minutes: 60 | 360 | 144
       cancelled = true;
       clearInterval(every);
     };
-  }, [deviceId, minutes, present]);
+  }, [deviceId, minutes, present, key]);
 
   const to = now;
   const from = now - minutes * 60_000;
+  const data = loaded?.key === key ? loaded.data : null;
   const segments: PresenceSegment[] = data ? presenceSegments({ ...toPresencePoints(data), from, to, now }) : [];
-  return { segments, from, to, loading: data === null };
+  return { segments, from, to, loading: deviceId !== null && data === null };
 }

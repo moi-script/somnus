@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { NightSummary } from '@lacs/contracts';
 import { api, getToken } from '@/lib/api';
 import { fmtDuration } from '@/lib/format';
-import { greeting, hrStatus, movementLevel, sleepGoalProgress, stressLevel } from '@/lib/levels';
+import { greeting, hrStatus, isSleepingNow, movementLevel, sleepGoalProgress, stressLevel } from '@/lib/levels';
 import { readSleepTarget } from '@/lib/targets';
 import { useDevice } from '@/lib/useDevice';
 import { useLightCommand } from '@/lib/useLightCommand';
@@ -41,8 +41,12 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!room) return;
-    api.nights(room.deviceId, 2).then(setNights).catch(() => setNights([]));
-  }, [room]);
+    const load = () => api.nights(room.deviceId, 2).then(setNights).catch(() => setNights([]));
+    void load();
+    // Tonight keeps growing while someone sleeps; refresh it.
+    const every = setInterval(load, 5 * 60_000);
+    return () => clearInterval(every);
+  }, [room, live.present]);
 
   const bandLive = state === 'live' && latest !== null;
   const bpm = bandLive && latest.ppg.ok && latest.ppg.finger ? Math.round(latest.ppg.bpmAvg || latest.ppg.bpm) : null;
@@ -55,8 +59,12 @@ export default function HomePage() {
 
   // Tonight while someone is in the room, otherwise the newest recorded night.
   const tonight = nights?.[0];
-  // Only a unit that is reporting right now can say someone is asleep.
-  const sleeping = live.online && live.present === true && tonight?.stretch;
+  const sleeping = isSleepingNow({
+    online: live.online,
+    present: live.present,
+    stretchEnd: tonight?.stretch?.end ?? null,
+    now: now.getTime(),
+  });
   const shown = sleeping ? tonight : nights?.find((n) => n.recorded);
   const minutes = shown ? Math.round(shown.inRoomMs / 60_000) : 0;
   const progress = sleepGoalProgress(minutes, goal);

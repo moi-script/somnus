@@ -3,6 +3,7 @@ import {
   chartStats,
   consistencyLabel,
   greeting,
+  isSleepingNow,
   hrStatus,
   hueSatToWheel,
   movementLevel,
@@ -117,5 +118,24 @@ describe('colour wheel', () => {
       const p = hueSatToWheel(h, s, 104);
       expect(wheelToHueSat(p.x, p.y, 104)).toEqual({ h, s });
     }
+  });
+});
+
+describe('isSleepingNow', () => {
+  const MIN = 60_000;
+  const now = 1_000_000_000;
+
+  it('needs a reporting unit, someone present, and a stretch still running', () => {
+    expect(isSleepingNow({ online: true, present: true, stretchEnd: now - 2 * MIN, now })).toBe(true);
+  });
+
+  it('does not count someone in the room hours after last night ended', () => {
+    expect(isSleepingNow({ online: true, present: true, stretchEnd: now - 5 * 60 * MIN, now })).toBe(false);
+  });
+
+  it('does not trust an offline unit or an empty room', () => {
+    expect(isSleepingNow({ online: false, present: true, stretchEnd: now, now })).toBe(false);
+    expect(isSleepingNow({ online: true, present: false, stretchEnd: now, now })).toBe(false);
+    expect(isSleepingNow({ online: true, present: true, stretchEnd: null, now })).toBe(false);
   });
 });

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { lightCss, nightDateFor, nightWindow, presenceSummary } from '@lacs/contracts';
 import { api, getToken } from '@/lib/api';
 import { fmtClock, fmtDuration } from '@/lib/format';
+import { bedExitLabel, presenceLine } from '@/lib/bedText';
+import { lightModeOf } from '@/lib/lightControl';
 import { movementLevel } from '@/lib/levels';
 import { useDevice } from '@/lib/useDevice';
 import { useLightCommand } from '@/lib/useLightCommand';
@@ -54,7 +56,6 @@ export default function BedPage() {
   const tz = new Date().getTimezoneOffset();
   const tonight = nightWindow(nightDateFor(Date.now(), tz), tz);
   const lastExit = presenceSummary(day.segments).lastExitAt;
-  const exitTonight = lastExit !== null && lastExit >= tonight.start ? lastExit : null;
   const bandLive = state === 'live';
   const movement = useMemo(
     () => (bandLive ? movementLevel(history.slice(-50).filter((f) => f.imu.ok).map((f) => f.imu.mag)) : null),
@@ -85,7 +86,7 @@ export default function BedPage() {
           <div className="grid grid-cols-2 gap-3">
             <StatTile stacked icon={<BedIcon className="h-5 w-5" />} tone="good" label="Occupancy" value={present === null ? '--' : present ? 'Occupied' : 'Empty'} />
             <StatTile stacked icon={<RadarIcon className="h-5 w-5" />} tone="primary" label="Presence" value={present === null ? '--' : present ? 'Detected' : 'Not detected'} />
-            <StatTile stacked icon={<ExitIcon className="h-5 w-5" />} tone="heart" label="Bed Exit" value={exitTonight ? `Left ${fmtClock(exitTonight)}` : 'Not detected'} />
+            <StatTile stacked icon={<ExitIcon className="h-5 w-5" />} tone="heart" label="Bed Exit" value={bedExitLabel(day.loading, lastExit, tonight.start)} />
             {movement && <StatTile stacked icon={<WalkIcon className="h-5 w-5" />} tone="motion" label="Movement" value={movement} status="from wristband" statusTone="muted" />}
           </div>
         </SectionCard>
@@ -93,8 +94,7 @@ export default function BedPage() {
         <SectionCard title="Presence" action={<div className="w-40"><SegmentedTabs tabs={[...WINDOWS]} active={win} onChange={setWin} /></div>}>
           <TimelineStrip segments={graph.segments} kinds={PRESENCE_KINDS} from={graph.from} to={graph.to} />
           <p className="mt-3 text-sm text-muted">
-            In bed {fmtDuration(summary.presentMs)} of the last {WINDOWS.find((w) => w.id === win)!.label}
-            {summary.exits > 0 ? ` · left ${summary.exits} ${summary.exits === 1 ? 'time' : 'times'}` : ''}
+            {presenceLine(graph.loading, summary, WINDOWS.find((w) => w.id === win)!.label)}
           </p>
         </SectionCard>
 
@@ -125,8 +125,8 @@ export default function BedPage() {
               { id: 'manual', label: 'Manual' },
               { id: 'adaptive', label: 'Adaptive Radar' },
             ]}
-            active={live.auto ? 'adaptive' : 'manual'}
-            onChange={(id) => void light.send({ cmd: 'auto', on: id === 'adaptive' })}
+            active={lightModeOf(live.online, live.auto)}
+            onChange={(id) => live.online && void light.send({ cmd: 'auto', on: id === 'adaptive' })}
           />
           {light.message && <p className="mt-3 text-sm text-muted">{light.message}</p>}
         </SectionCard>

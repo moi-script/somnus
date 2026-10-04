@@ -5,7 +5,8 @@ export function SegmentedTabs<T extends string>({
   activeClass = 'bg-primary text-white shadow-glow',
 }: {
   tabs: { id: T; label: string }[];
-  active: T;
+  /** null: nothing selected, e.g. a mode the device has not reported. */
+  active: T | null;
   onChange: (id: T) => void;
   activeClass?: string;
 }) {
@@ -32,7 +33,7 @@ export function SegmentedTabs<T extends string>({
 /** Two-way switch such as Manual / Adaptive Radar; the chosen side glows green. */
 export function SegmentedToggle<T extends string>(props: {
   tabs: { id: T; label: string }[];
-  active: T;
+  active: T | null;
   onChange: (id: T) => void;
 }) {
   return <SegmentedTabs {...props} activeClass="bg-good text-canvas shadow-glow" />;

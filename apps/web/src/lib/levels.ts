@@ -92,3 +92,19 @@ export function hueSatToWheel(h: number, s: number, r: number): { x: number; y: 
   const d = (s / 100) * r;
   return { x: d * Math.sin(rad), y: -d * Math.cos(rad) };
 }
+
+/** How recent the night's stretch must end for "Sleeping" (nights are refetched every 5 min). */
+const SLEEPING_STRETCH_MS = 15 * 60_000;
+
+/**
+ * "Sleeping" needs a unit reporting now, someone in the room, and tonight's
+ * stretch still running - not last night's, seen again at 11:00.
+ */
+export function isSleepingNow(args: {
+  online: boolean;
+  present: boolean | null;
+  stretchEnd: number | null;
+  now: number;
+}): boolean {
+  return args.online && args.present === true && args.stretchEnd !== null && args.now - args.stretchEnd < SLEEPING_STRETCH_MS;
+}
