@@ -3,7 +3,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LATEST_APK, useUpdate } from '@/lib/update';
+import { useUpdate } from '@/lib/update';
+import { UpdateBanner } from './UpdateBanner';
 import { BedIcon, HeartIcon, HomeIcon, MenuIcon, MoonIcon } from './Icons';
 
 const TABS = [
@@ -63,20 +64,7 @@ export function AppShell({
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-6 sm:px-8">
-        {showBanner && update && (
-          <div className="card mb-4 flex items-center gap-3 px-5 py-4">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">Somnus {update.version} is out</p>
-              <p className="text-sm text-muted">Install it over this one. Your readings stay on the phone.</p>
-            </div>
-            <a href={LATEST_APK} className="btn-primary shrink-0 !py-2 text-sm">
-              Update
-            </a>
-            <button type="button" onClick={dismiss} aria-label="Not now" className="shrink-0 px-1 text-xl leading-none text-muted">
-              ×
-            </button>
-          </div>
-        )}
+        {showBanner && update && <UpdateBanner update={update} onDismiss={dismiss} />}
         {children}
       </main>
 

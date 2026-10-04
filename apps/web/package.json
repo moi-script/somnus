@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.2",
+    "@capacitor-community/file-opener": "^7.0.1",
     "@capacitor-community/sqlite": "^7.0.3",
     "@capacitor/core": "^7.6.9",
+    "@capacitor/filesystem": "^7.1.9",
     "@capacitor/network": "^7.0.4",
     "@lacs/contracts": "*",
     "next": "^15.1.4",

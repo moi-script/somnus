@@ -4,16 +4,18 @@
   "private": true,
   "description": "Capacitor shell that packages the LACS dashboard as a sideloadable Android APK.",
   "scripts": {
-    "sync": "node ../../scripts/clean-apk-assets.mjs && node ../../scripts/write-network-config.mjs && npm run build --workspace @lacs/web && cap sync android",
+    "sync": "node ../../scripts/clean-apk-assets.mjs && node ../../scripts/write-network-config.mjs && npm run build --workspace @lacs/web && cap sync android && node ../../scripts/android-setup.mjs",
     "open": "cap open android",
     "apk:debug": "npm run sync && cd android && .\\gradlew.bat assembleDebug",
     "apk:release": "npm run sync && cd android && .\\gradlew.bat assembleRelease"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.2",
+    "@capacitor-community/file-opener": "^7.0.1",
     "@capacitor-community/sqlite": "^7.0.3",
     "@capacitor/android": "^7.6.9",
     "@capacitor/core": "^7.6.9",
+    "@capacitor/filesystem": "^7.1.9",
     "@capacitor/network": "^7.0.4"
   },
   "devDependencies": {
