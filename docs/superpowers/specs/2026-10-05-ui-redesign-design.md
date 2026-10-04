@@ -94,7 +94,7 @@ Headers: Home — greeting + date, bell (hidden until C). Bed — room unit `Sta
 - Quick Controls: Light (toggles on/off with the existing `light` command). Alerts and Sleep Music arrive with C.
 
 ### 6.2 Sleep → Overview
-- `Ring`: time in room for the latest night against an 8 h goal (editable goal arrives with C); badge Good / Fair / Short.
+- `Ring`: time in room for the latest night against the sleep-hours target already kept in settings (`lacs.targets`, default 8 h; it moves with Me to App Settings); badge Good / Fair / Short.
 - Tiles: Sleep Start, Sleep End, Consistency (from the last 7 `nights`), Bed Exits (the night's "emptied" count).
 - Sleep Timeline: last night's presence and light strips (today's `NightStrips` data) in `TimelineStrip`.
 - The room light card (`RoomNow`) moves to the Bed tab.
@@ -103,7 +103,7 @@ Headers: Home — greeting + date, bell (hidden until C). Bed — room unit `Sta
 - **Heart Rate:** current BPM, `hrStatus` pill, Avg/Min/Max and `LineChart` over today's readings; Quick check and Recent events (today's Health page) below.
 - **SpO₂:** same layout, valid readings only.
 - **Stress:** GSR level (`stressLevel`) and the GSR `LineChart`, labelled "Skin response (GSR) — an estimate of arousal, not a diagnosis".
-- **History:** today's History list.
+- **History:** the band's recent events (`EventList`, last 50) and a row to the full History page (`/more/history/?id=…`).
 
 ### 6.4 Display rules (`apps/web/src/lib/levels.ts`, unit-tested)
 - `hrStatus(bpm)`: < 50 Low, 50–100 Normal, > 100 High; `null`/0 → none.
@@ -111,6 +111,12 @@ Headers: Home — greeting + date, bell (hidden until C). Bed — room unit `Sta
 - `movementLevel(mags)`: mean of `|mag − 1 g|` over the last 10 s: < 0.05 Low, < 0.20 Medium, else High.
 - `greeting(date)`, `sleepGoalProgress(minutes, goal)`, `consistencyLabel(nights)`.
 - `wheelToHueSat(x, y, r)` / `hueSatToWheel(h, s, r)` for the colour wheel.
+
+### 6.5 Readings over a day (`GET /api/v1/devices/:deviceId/readings/series`)
+The band sends about 5 readings a second and `/readings` returns at most 1,000 (about 3 minutes), so a day chart needs a server summary.
+- Query: `from`, `to` (ISO datetimes, `to − from` ≤ 7 days), `bucketSec` (60–3600, default 300). Owner only (`requireOwnedDevice`).
+- Response: buckets oldest first, `[{ at, bpm, spo2, gsr, motion }]`, each value the mean of that bucket's usable readings or `null`: `bpm` from `ppg.bpmAvg || ppg.bpm` where `ppg.ok && ppg.finger` and > 0; `spo2` where `ppg.spo2Valid`; `gsr` from `gsr.raw` where `gsr.ok`; `motion` = mean `|imu.mag − 1|` where `imu.ok`. Empty buckets are left out.
+- Used by the Heart Rate, SpO₂ and Stress tabs and the Heart Rate detail (today, from local midnight).
 
 ## 7. Bed tab
 
@@ -141,7 +147,7 @@ Tiles: Occupancy (Occupied/Empty), Presence (Detected/Not detected), Bed Exit ("
 
 - `packages/contracts` (vitest): `presenceSegments` — carry-in from `before`, empty window, gaps → `none`, clipping, `now` inside the window, never-reported unit.
 - `apps/web` (vitest added, pure functions only): every function in §6.4.
-- `apps/api` (vitest, local MongoDB): `/room/presence` — window and `before`, oldest-first order, guarded by the same `roomOnly` middleware as `/room/latest` (another owner and a band device get the same responses it gives), invalid `minutes` → 400.
+- `apps/api` (vitest, local MongoDB): `/readings/series` — bucket means, unusable readings ignored, empty buckets left out, range over 7 days → 400, other owner refused. `/room/presence` — window and `before`, oldest-first order, guarded by the same `roomOnly` middleware as `/room/latest` (another owner and a band device get the same responses it gives), invalid `minutes` → 400.
 - Typecheck and build list every route in §5, including forwarding pages.
 - `scripts/seed-demo.mjs`: registers a demo account on a **localhost** API (refuses any other host), claims a band and a room unit, and ingests a night: presence with two bed exits, light changes, and band frames (HR, SpO₂, GSR, IMU). Used for screenshots and for the defense demo.
 - Screenshots of every route at 390 px wide, dark and light, compared side by side with the mockups and shown to the user before A is called done.
