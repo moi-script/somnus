@@ -205,3 +205,71 @@ export function RadarIcon(p: IconProps) {
     </Svg>
   );
 }
+
+export function HomeIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 10v9h12v-9" />
+      <path d="M10 19v-5h4v5" />
+    </Svg>
+  );
+}
+
+export function BedIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3 18V7" />
+      <path d="M3 14h18v4" />
+      <path d="M21 14v-2a3 3 0 0 0-3-3h-7v5" />
+      <circle cx="7" cy="11" r="2" />
+    </Svg>
+  );
+}
+
+export function MenuIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </Svg>
+  );
+}
+
+export function GearIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </Svg>
+  );
+}
+
+export function ExitIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <path d="M10 16l-4-4 4-4" />
+      <path d="M6 12h10" />
+    </Svg>
+  );
+}
+
+export function WalkIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="13" cy="4.5" r="1.8" />
+      <path d="m9 21 2.5-6 2.5 2v4" />
+      <path d="M8 12l2-4.5 4 1 2 3.5 2.5 1" />
+      <path d="M11.5 15 10 7.5" />
+    </Svg>
+  );
+}
+
+export function PowerIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3v8" />
+      <path d="M6.4 6.4a8 8 0 1 0 11.2 0" />
+    </Svg>
+  );
+}
