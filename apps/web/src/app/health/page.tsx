@@ -1,56 +1,48 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { NightSummary, Reading, StoredEvent, TelemetryFrame } from '@lacs/contracts';
-import { fmtDuration, nightLabel } from '@/lib/format';
+import type { SeriesPoint, StoredEvent } from '@lacs/contracts';
 import { api, getToken } from '@/lib/api';
+import { hrStatus, stressLevel } from '@/lib/levels';
 import { useDevice } from '@/lib/useDevice';
+import { startOfDay, useSeries } from '@/lib/useSeries';
 import { useStream } from '@/lib/useStream';
+import { useTabParam } from '@/lib/useTabParam';
 import { AppShell } from '@/components/AppShell';
-import { HeroMetric, MetricTile, PendingTile } from '@/components/Metrics';
-import {
-  DropIcon,
-  HeartIcon,
-  MoonIcon,
-  PulseIcon,
-  SparkIcon,
-  StepsIcon,
-  ThermometerIcon,
-} from '@/components/Icons';
+import { EventList } from '@/components/EventList';
+import { DropIcon, HeartIcon, SparkIcon } from '@/components/Icons';
+import { QuickCheck } from '@/components/QuickCheck';
+import { ChartStatsRow, LineChart, type ChartPoint } from '@/components/ui/LineChart';
+import { ListRow } from '@/components/ui/ListRow';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { StatusPill } from '@/components/ui/StatusPill';
 
-const CHECK_SECONDS = 15;
+const TABS = [
+  { id: 'heart', label: 'Heart Rate' },
+  { id: 'spo2', label: 'SpO₂' },
+  { id: 'stress', label: 'Stress' },
+  { id: 'history', label: 'History' },
+] as const;
+type Tab = (typeof TABS)[number]['id'];
+const TAB_IDS = TABS.map((t) => t.id);
 
-interface CheckResult {
-  frames: number;
-  cleanFrames: number;
-  bpm: number | null;
-  skinRise: number | null;
-  stillness: number;
+function pointsOf(series: SeriesPoint[], key: 'bpm' | 'spo2' | 'gsr'): ChartPoint[] {
+  return series.flatMap((p) => (p[key] === null ? [] : [{ t: Date.parse(p.at), v: p[key]! }]));
 }
 
-export default function HealthPage() {
+const STATUS_TONE = { Normal: 'good', Low: 'warn', High: 'bad', Medium: 'warn' } as const;
+
+function HealthView() {
   const router = useRouter();
-  const { active, bands, room } = useDevice();
-  const [lastNight, setLastNight] = useState<NightSummary | null>(null);
-
-  // The newest night with anything in it. Tonight in progress usually has
-  // nothing yet, so look one further back too.
-  useEffect(() => {
-    if (!room) return;
-    api
-      .nights(room.deviceId, 2)
-      .then((nights) => setLastNight(nights.find((n) => n.recorded) ?? null))
-      .catch(() => setLastNight(null));
-  }, [room]);
-  const [seed, setSeed] = useState<TelemetryFrame[]>([]);
+  const { active, bands } = useDevice();
+  const [tab, setTab] = useTabParam<Tab>(TAB_IDS, 'heart');
+  const { state, latest } = useStream(active?.deviceId ?? null);
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const { points, loading } = useSeries(active?.deviceId ?? null, today, null);
   const [events, setEvents] = useState<StoredEvent[]>([]);
-
-  const [checking, setChecking] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [result, setResult] = useState<CheckResult | null>(null);
-  const captured = useRef<TelemetryFrame[]>([]);
 
   useEffect(() => {
     if (!getToken()) router.replace('/login/');
@@ -58,326 +50,101 @@ export default function HealthPage() {
 
   useEffect(() => {
     if (!active) return;
-    void (async () => {
-      const [readings, evts] = await Promise.all([
-        api.readings(active.deviceId, 300).catch(() => [] as Reading[]),
-        api.events(active.deviceId, 8).catch(() => [] as StoredEvent[]),
-      ]);
-      setSeed(readings);
-      setEvents(evts);
-    })();
+    api.events(active.deviceId, 50).then(setEvents).catch(() => setEvents([]));
   }, [active]);
 
-  const { state, latest, history } = useStream(active?.deviceId ?? null, seed);
+  if (bands !== null && bands.length === 0) {
+    return (
+      <SectionCard title="Add your band to get started">
+        <p className="text-muted">Once the band is added and sending, heart rate, SpO₂ and stress show up here.</p>
+        <Link href="/more/devices/" className="btn-primary mt-4 inline-block">
+          Add a band
+        </Link>
+      </SectionCard>
+    );
+  }
 
-  useEffect(() => {
-    if (checking && latest) captured.current.push(latest);
-  }, [checking, latest]);
-
-  const series = useMemo(
-    () => ({
-      bpm: history.map((f) => f.ppg.bpmAvg || f.ppg.bpm).filter((v) => v > 0),
-      skin: history.map((f) => f.gsr.raw),
-      motion: history.map((f) => f.imu.mag),
-      spo2: history
-        .filter((f) => f.ppg.spo2Valid && typeof f.ppg.spo2 === 'number')
-        .map((f) => f.ppg.spo2 as number),
-      steps: history.flatMap((f) => (f.steps ? [f.steps.count] : [])),
-    }),
-    [history],
-  );
-
-  const runCheck = useCallback(() => {
-    captured.current = [];
-    setResult(null);
-    setChecking(true);
-    setSecondsLeft(CHECK_SECONDS);
-
-    const tick = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
-    setTimeout(() => {
-      clearInterval(tick);
-      setChecking(false);
-      setSecondsLeft(0);
-
-      const frames = captured.current;
-      const clean = frames.filter((f) => f.ppg.ok && f.ppg.finger && f.imu.ok && f.gsr.ok);
-      const beats = clean.map((f) => f.ppg.bpmAvg || f.ppg.bpm).filter((v) => v > 0);
-      const skin = clean.map((f) => f.gsr.raw);
-      const motion = clean.map((f) => f.imu.mag);
-
-      setResult({
-        frames: frames.length,
-        cleanFrames: clean.length,
-        bpm: beats.length ? Math.round(beats.reduce((a, b) => a + b, 0) / beats.length) : null,
-        skinRise:
-          skin.length && clean[0]
-            ? Math.round(Math.max(...skin) - (clean[0].gsr.base ?? skin[0]!))
-            : null,
-        stillness: motion.length
-          ? Math.max(...motion.map((m) => Math.abs(m - 1)))
-          : 0,
-      });
-    }, CHECK_SECONDS * 1000);
-  }, []);
-
-  const today = new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-
-  const noDevice = bands !== null && bands.length === 0;
+  const live = state === 'live';
+  const bpm = live && latest?.ppg.ok && latest.ppg.finger ? Math.round(latest.ppg.bpmAvg || latest.ppg.bpm) || null : null;
+  const spo2 = live && latest?.ppg.spo2Valid && latest.ppg.spo2 ? latest.ppg.spo2 : null;
+  const stress = live && latest?.gsr.ok ? stressLevel(latest.gsr.raw, latest.gsr.base) : null;
+  const bpmPoints = pointsOf(points, 'bpm');
+  const spo2Points = pointsOf(points, 'spo2');
+  const gsrPoints = pointsOf(points, 'gsr');
+  const chartFrom = today.getTime();
+  const chartTo = Date.now();
+  const empty = loading ? 'Loading…' : undefined;
 
   return (
-    <AppShell
-      title="Health"
-      subtitle={today}
-    >
-      {noDevice && (
-        <section className="card px-6 py-6">
-          <h2 className="text-lg font-semibold">Add your band to get started</h2>
-          <p className="mt-2 text-muted">
-            Switch the node on and read the id from its first line, something
-            like lacs-7a3f21. Once it is added, readings show up here.
-          </p>
-          <Link href="/more/devices/" className="btn-primary mt-4 inline-block">
-            Add a band
-          </Link>
-        </section>
+    <div className="space-y-4">
+      <SegmentedTabs tabs={[...TABS]} active={tab} onChange={setTab} />
+
+      {tab === 'heart' && (
+        <>
+          <SectionCard
+            title="Heart Rate"
+            icon={<HeartIcon className="h-5 w-5 text-heart" />}
+            action={hrStatus(bpm) && <StatusPill tone={STATUS_TONE[hrStatus(bpm)!]} label={hrStatus(bpm)!} />}
+          >
+            <p className="tabular text-4xl font-bold">
+              {bpm ?? '--'} <span className="text-base font-medium text-muted">BPM</span>
+            </p>
+            <div className="mt-2">
+              <ChartStatsRow values={bpmPoints.map((p) => p.v)} unit="BPM" />
+            </div>
+            <div className="mt-4">{empty ?? <LineChart points={bpmPoints} tone="heart" from={chartFrom} to={chartTo} label="Heart rate today" />}</div>
+            <Link href="/health/heart/" className="mt-4 inline-block text-sm font-medium text-primary">
+              View details
+            </Link>
+          </SectionCard>
+          <QuickCheck live={live} latest={latest} />
+        </>
       )}
 
-      {!noDevice && (
-        <div className="space-y-4">
-          <HeroMetric
-            label="Heart rate"
-            value={
-              latest && latest.ppg.ok && (latest.ppg.bpmAvg || latest.ppg.bpm)
-                ? String(Math.round(latest.ppg.bpmAvg || latest.ppg.bpm))
-                : '--'
-            }
-            unit="bpm"
-            color="#FF6B8A"
-            data={series.bpm}
-            minSpan={12}
-            icon={<HeartIcon className="h-5 w-5" />}
-            note={
-              !latest
-                ? 'Waiting for the band'
-                : !latest.ppg.ok
-                  ? 'The pulse sensor is not answering'
-                  : !latest.ppg.finger
-                    ? 'Rest a finger on the sensor and hold still'
-                    : undefined
-            }
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <MetricTile
-              label="Skin response"
-              value={latest?.gsr.ok ? String(latest.gsr.raw) : '--'}
-              color="#F5A524"
-              icon={<SparkIcon className="h-5 w-5" />}
-              data={series.skin}
-              minSpan={150}
-              note={
-                latest?.gsr.ok
-                  ? `Settled around ${latest.gsr.base}`
-                  : 'The skin sensor is not answering'
-              }
-            />
-            <MetricTile
-              label="Movement"
-              value={latest?.imu.ok ? latest.imu.mag.toFixed(2) : '--'}
-              unit="g"
-              color="#2ED3C6"
-              icon={<PulseIcon className="h-5 w-5" />}
-              data={series.motion}
-              minSpan={0.4}
-              note={
-                latest?.imu.ok
-                  ? latest.imu.mag > 1.3
-                    ? 'Moving'
-                    : 'Still'
-                  : 'The motion sensor is not answering'
-              }
-            />
+      {tab === 'spo2' && (
+        <SectionCard title="SpO₂" icon={<DropIcon className="h-5 w-5 text-oxygen" />} action={spo2 && <StatusPill tone={spo2 >= 95 ? 'good' : spo2 >= 90 ? 'warn' : 'bad'} label={spo2 >= 95 ? 'Normal' : 'Low'} />}>
+          <p className="tabular text-4xl font-bold">
+            {spo2 ?? '--'}
+            <span className="text-base font-medium text-muted">%</span>
+          </p>
+          <div className="mt-2">
+            <ChartStatsRow values={spo2Points.map((p) => p.v)} unit="%" />
           </div>
+          <div className="mt-4">{empty ?? <LineChart points={spo2Points} tone="oxygen" from={chartFrom} to={chartTo} min={80} max={100} label="SpO2 today" />}</div>
+          <p className="mt-3 text-xs text-muted">Only readings the band marked valid are shown.</p>
+        </SectionCard>
+      )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {latest?.ppg.spo2Valid === undefined ? (
-              <PendingTile
-                label="Blood oxygen"
-                color="#4C9AFF"
-                icon={<DropIcon className="h-5 w-5" />}
-                reason="This band's firmware is too old to work it out. Update the band to read it."
-              />
-            ) : (
-              <MetricTile
-                label="Blood oxygen"
-                value={
-                  latest.ppg.spo2Valid && latest.ppg.spo2 ? String(latest.ppg.spo2) : '--'
-                }
-                unit="%"
-                color="#4C9AFF"
-                icon={<DropIcon className="h-5 w-5" />}
-                data={series.spo2}
-                minSpan={6}
-                note={
-                  latest.ppg.spo2Valid
-                    ? undefined
-                    : latest.ppg.finger
-                      ? 'Working it out. Keep your finger still.'
-                      : 'Rest a finger on the sensor'
-                }
-              />
-            )}
+      {tab === 'stress' && (
+        <SectionCard title="Stress" icon={<SparkIcon className="h-5 w-5 text-stress" />} action={stress && <StatusPill tone={STATUS_TONE[stress]} label={stress} />}>
+          <p className="text-4xl font-bold">{stress ?? '--'}</p>
+          <div className="mt-4">{empty ?? <LineChart points={gsrPoints} tone="stress" from={chartFrom} to={chartTo} label="Skin response today" />}</div>
+          <p className="mt-3 text-xs text-muted">Skin response (GSR) — an estimate of arousal, not a diagnosis.</p>
+        </SectionCard>
+      )}
 
-            {!latest?.steps ? (
-              <PendingTile
-                label="Steps"
-                color="#7C6CF0"
-                icon={<StepsIcon className="h-5 w-5" />}
-                reason="This band's firmware is too old to count them. Update the band to see steps."
-              />
-            ) : (
-              <MetricTile
-                label="Steps"
-                value={latest.steps.count.toLocaleString()}
-                color="#7C6CF0"
-                icon={<StepsIcon className="h-5 w-5" />}
-                data={series.steps}
-                note={
-                  latest.steps.cadence > 0
-                    ? `Walking, ${latest.steps.cadence} a minute`
-                    : 'Counted since the band was switched on'
-                }
-              />
-            )}
-            {lastNight?.recorded ? (
-              <Link href="/sleep/" className="block">
-                <MetricTile
-                  label="Sleep"
-                  value={fmtDuration(lastNight.inRoomMs)}
-                  color="#7C6CF0"
-                  icon={<MoonIcon className="h-5 w-5" />}
-                  note={`in the room, ${nightLabel(lastNight.date).toLowerCase()}`}
-                />
-              </Link>
-            ) : (
-              <PendingTile
-                label="Sleep"
-                color="#7C6CF0"
-                icon={<MoonIcon className="h-5 w-5" />}
-                reason={
-                  room
-                    ? 'The room unit has not recorded a night yet. It needs an hour or more of someone in the room between 18:00 and 14:00.'
-                    : 'Add the room unit by your bed to see how long you were in the room each night.'
-                }
-              />
-            )}
-            <PendingTile
-              label="Body temperature"
-              color="#FF9A62"
-              icon={<ThermometerIcon className="h-5 w-5" />}
-              reason="The band can only read the temperature of its own circuit board, which is not your temperature. This needs a sensor that touches skin."
-            />
-          </div>
-
-          <section className="card px-6 py-6">
-            <h2 className="text-lg font-semibold">Quick check</h2>
-            <p className="mt-1 text-muted">
-              Hold still with a finger on the sensor for {CHECK_SECONDS} seconds
-              and the band reports what it managed to read.
-            </p>
-
-            <button
-              type="button"
-              className="btn-primary mt-4"
-              onClick={runCheck}
-              disabled={checking || state !== 'live'}
-            >
-              {checking ? `Reading, ${secondsLeft}s left` : 'Start check'}
-            </button>
-
-            {state !== 'live' && !checking && (
-              <p className="mt-3 text-sm text-muted">
-                The band needs to be sending data before a check can run.
-              </p>
-            )}
-
-            {result && (
-              <dl className="mt-5 divide-y divide-line border-t border-line">
-                <div className="flex justify-between py-3">
-                  <dt className="text-muted">Heart rate</dt>
-                  <dd className="tabular font-semibold">
-                    {result.bpm ? `${result.bpm} bpm` : 'not enough clean data'}
-                  </dd>
-                </div>
-                <div className="flex justify-between py-3">
-                  <dt className="text-muted">Skin response</dt>
-                  <dd className="tabular font-semibold">
-                    {result.skinRise === null
-                      ? 'no reading'
-                      : result.skinRise > 250
-                        ? `rose ${result.skinRise}`
-                        : 'steady'}
-                  </dd>
-                </div>
-                <div className="flex justify-between py-3">
-                  <dt className="text-muted">How still you were</dt>
-                  <dd className="tabular font-semibold">
-                    {result.stillness < 0.15
-                      ? 'very still'
-                      : result.stillness < 0.5
-                        ? 'some movement'
-                        : 'too much movement'}
-                  </dd>
-                </div>
-                <div className="flex justify-between py-3">
-                  <dt className="text-muted">Usable readings</dt>
-                  <dd className="tabular font-semibold">
-                    {result.cleanFrames} of {result.frames}
-                  </dd>
-                </div>
-              </dl>
-            )}
-          </section>
-
-          {events.length > 0 && (
-            <section className="card">
-              <div className="flex items-baseline justify-between px-6 pt-5">
-                <h2 className="text-lg font-semibold">Recent</h2>
-                <Link
-                  href={`/more/history/?id=${active?.deviceId ?? ''}`}
-                  className="text-sm font-medium text-muted hover:text-ink"
-                >
-                  See all
-                </Link>
-              </div>
-              <ul className="mt-2 divide-y divide-line">
-                {events.slice(0, 5).map((e) => (
-                  <li key={e.seq} className="flex items-baseline gap-4 px-6 py-3">
-                    <span className="tabular text-sm text-muted">
-                      {new Date(e.recordedAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    <span className="flex-1">
-                      {e.kind === 'fall'
-                        ? 'A knock or a fall'
-                        : e.kind === 'gsr_spike'
-                          ? 'Skin response jumped'
-                          : 'Finger came off the sensor'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="pb-3" />
+      {tab === 'history' && (
+        <>
+          <SectionCard title="Recent events">
+            <EventList events={events.map((e) => ({ kind: e.kind, value: e.value, at: e.recordedAt, seq: e.seq }))} />
+          </SectionCard>
+          {active && (
+            <section className="card overflow-hidden">
+              <ListRow icon={<SparkIcon className="h-5 w-5" />} tone="sleep" title="Full history" subtitle="Every reading and event" href={`/more/history/?id=${active.deviceId}`} />
             </section>
           )}
-        </div>
+        </>
       )}
+    </div>
+  );
+}
+
+export default function HealthPage() {
+  return (
+    <AppShell title="Health">
+      <Suspense fallback={<p className="text-muted">Loading</p>}>
+        <HealthView />
+      </Suspense>
     </AppShell>
   );
 }
