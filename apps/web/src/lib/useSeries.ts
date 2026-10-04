@@ -16,7 +16,12 @@ export function useSeries(deviceId: string | null, from: Date, to: Date | null) 
   const toMs = to?.getTime() ?? null;
 
   useEffect(() => {
-    if (!deviceId) return;
+    if (!deviceId) {
+      // Nothing to wait for: the chart says there are no readings.
+      setPoints([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const load = () =>
       api

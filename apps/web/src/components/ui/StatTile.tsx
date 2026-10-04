@@ -11,6 +11,7 @@ export function StatTile({
   unit,
   status,
   statusTone,
+  stacked = false,
 }: {
   icon: ReactNode;
   tone: Tone;
@@ -19,17 +20,19 @@ export function StatTile({
   unit?: string;
   status?: string | null;
   statusTone?: Tone;
+  /** Icon above the text, for narrow tiles inside a card (as on the Bed tab). */
+  stacked?: boolean;
 }) {
   return (
-    <div className="card flex items-center gap-3 p-4">
+    <div className={`card flex gap-3 p-4 ${stacked ? 'flex-col items-start' : 'items-center'}`}>
       <IconDisc icon={icon} tone={tone} />
       <div className="min-w-0">
-        <p className="truncate text-xs text-muted">{label}</p>
-        <p className="tabular truncate text-lg font-bold leading-tight">
+        <p className="text-xs leading-tight text-muted">{label}</p>
+        <p className={`tabular font-bold leading-tight ${stacked ? 'text-base' : 'truncate text-lg'}`}>
           {value}
           {unit && <span className="ml-1 text-xs font-medium text-muted">{unit}</span>}
         </p>
-        {status && <p className={`truncate text-xs font-medium ${TONE[statusTone ?? tone].text}`}>{status}</p>}
+        {status && <p className={`text-xs font-medium leading-tight ${TONE[statusTone ?? tone].text}`}>{status}</p>}
       </div>
     </div>
   );

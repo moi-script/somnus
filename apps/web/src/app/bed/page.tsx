@@ -76,16 +76,17 @@ export default function BedPage() {
     );
   }
 
-  const present = live.present;
+  // A unit that has stopped reporting cannot say who is in bed now.
+  const present = live.online ? live.present : null;
   return (
     <AppShell title="Bed" action={<StatusPill tone={live.online ? 'good' : 'idle'} label={live.online ? 'Connected' : 'Offline'} />}>
       <div className="space-y-4">
         <SectionCard title="Bed Unit Status">
           <div className="grid grid-cols-2 gap-3">
-            <StatTile icon={<BedIcon className="h-5 w-5" />} tone="good" label="Occupancy" value={present === null ? '--' : present ? 'Occupied' : 'Empty'} />
-            <StatTile icon={<RadarIcon className="h-5 w-5" />} tone="primary" label="Presence" value={present === null ? '--' : present ? 'Detected' : 'Not detected'} />
-            <StatTile icon={<ExitIcon className="h-5 w-5" />} tone="heart" label="Bed Exit" value={exitTonight ? `Left ${fmtClock(exitTonight)}` : 'Not detected'} />
-            {movement && <StatTile icon={<WalkIcon className="h-5 w-5" />} tone="motion" label="Movement" value={movement} status="from wristband" statusTone="muted" />}
+            <StatTile stacked icon={<BedIcon className="h-5 w-5" />} tone="good" label="Occupancy" value={present === null ? '--' : present ? 'Occupied' : 'Empty'} />
+            <StatTile stacked icon={<RadarIcon className="h-5 w-5" />} tone="primary" label="Presence" value={present === null ? '--' : present ? 'Detected' : 'Not detected'} />
+            <StatTile stacked icon={<ExitIcon className="h-5 w-5" />} tone="heart" label="Bed Exit" value={exitTonight ? `Left ${fmtClock(exitTonight)}` : 'Not detected'} />
+            {movement && <StatTile stacked icon={<WalkIcon className="h-5 w-5" />} tone="motion" label="Movement" value={movement} status="from wristband" statusTone="muted" />}
           </div>
         </SectionCard>
 
@@ -104,7 +105,7 @@ export default function BedPage() {
               icon={<BedIcon className="h-5 w-5" />}
               tone="good"
               title="Presence / Occupancy"
-              subtitle={present === null ? 'Waiting for the radar' : present ? 'Person in bed' : 'No one in bed'}
+              subtitle={present === null ? (live.online ? 'Waiting for the radar' : 'Bed unit offline') : present ? 'Person in bed' : 'No one in bed'}
             />
           </div>
         </section>

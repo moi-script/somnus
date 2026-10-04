@@ -81,6 +81,12 @@ The bridge reads the node over USB, uploads frames, and delivers queued
 commands. Close the Arduino Serial Monitor first — it holds the port open
 exclusively.
 
+### Demo data
+
+`node scripts/seed-demo.mjs` creates a demo account on a **local** API with a
+night of bed-unit and band data, and prints its login. It refuses any host
+other than localhost, so it can never write invented data to the real server.
+
 ### The Android app
 
 ```bash

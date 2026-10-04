@@ -55,7 +55,8 @@ export default function HomePage() {
 
   // Tonight while someone is in the room, otherwise the newest recorded night.
   const tonight = nights?.[0];
-  const sleeping = live.present === true && tonight?.stretch;
+  // Only a unit that is reporting right now can say someone is asleep.
+  const sleeping = live.online && live.present === true && tonight?.stretch;
   const shown = sleeping ? tonight : nights?.find((n) => n.recorded);
   const minutes = shown ? Math.round(shown.inRoomMs / 60_000) : 0;
   const progress = sleepGoalProgress(minutes, goal);

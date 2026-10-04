@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { Command } from '@lacs/contracts';
 import { useDevice } from '@/lib/useDevice';
 import { useLightCommand } from '@/lib/useLightCommand';
@@ -23,7 +24,7 @@ const SWATCHES: { label: string; css: string; command: LightCmd }[] = [
 ];
 
 function LightingView() {
-  const { room } = useDevice();
+  const { room, devices } = useDevice();
   const live = useRoom(room?.deviceId ?? null);
   const { send, message } = useLightCommand(room?.deviceId ?? null, live.lastAck);
   const [tab, setTab] = useTabParam(['manual', 'adaptive'] as const, 'manual');
@@ -64,6 +65,17 @@ function LightingView() {
   };
 
   const on = live.light?.on ?? false;
+
+  if (devices !== null && !room) {
+    return (
+      <SectionCard title="Add the bed unit">
+        <p className="text-muted">The light is controlled through the bed unit. Set it up first.</p>
+        <Link href="/more/devices/room-setup/" className="btn-primary mt-4 inline-block">
+          Set up the bed unit
+        </Link>
+      </SectionCard>
+    );
+  }
 
   return (
     <div className="space-y-4">
