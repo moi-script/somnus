@@ -6,17 +6,17 @@ import { useRouter } from 'next/navigation';
 import { nightDateFor, type NightSummary } from '@lacs/contracts';
 import { api, getToken } from '@/lib/api';
 import { useDevice } from '@/lib/useDevice';
-import { useRoom } from '@/lib/useRoom';
 import { fmtClock, fmtDuration, nightLabel } from '@/lib/format';
 import { AppShell } from '@/components/AppShell';
-import { MetricTile } from '@/components/Metrics';
 import { NightStrips } from '@/components/NightStrips';
-import { GROUP_META, LightMix, NightBars } from '@/components/LightMix';
-import { RoomNow } from '@/components/RoomNow';
-import { BulbIcon, ChevronIcon, MoonIcon, RadarIcon, SparkIcon } from '@/components/Icons';
-
-const SLEEP = '#7C6CF0';
-const LIGHT = '#F5A524';
+import { LightMix, NightBars } from '@/components/LightMix';
+import { ChevronIcon, ExitIcon, MoonIcon } from '@/components/Icons';
+import { consistencyLabel, sleepGoalProgress } from '@/lib/levels';
+import { readSleepTarget } from '@/lib/targets';
+import { Ring } from '@/components/ui/Ring';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatTile } from '@/components/ui/StatTile';
+import { StatusPill } from '@/components/ui/StatusPill';
 
 /**
  * The night to open on. Between 14:00 and 18:00 tonight has not started, so
@@ -33,13 +33,14 @@ function defaultNight(): string {
 export default function SleepPage() {
   const router = useRouter();
   const { room, active, devices } = useDevice();
-  const live = useRoom(room?.deviceId ?? null);
   const [nights, setNights] = useState<NightSummary[] | null>(null);
   const [selected, setSelected] = useState<string>(defaultNight);
   const [error, setError] = useState<string | null>(null);
+  const [goal, setGoal] = useState(8);
 
   useEffect(() => {
     if (!getToken()) router.replace('/login/');
+    setGoal(readSleepTarget());
   }, [router]);
 
   useEffect(() => {
@@ -56,12 +57,12 @@ export default function SleepPage() {
   const label = nightLabel(selected);
 
   const noRoom = devices !== null && !room;
+  const consistency = consistencyLabel(
+    (nights ?? []).filter((n) => n.recorded && n.stretch).map((n) => n.stretch!.start),
+  );
 
   return (
-    <AppShell
-      title="Sleep"
-      subtitle={room ? label : 'Your room overnight'}
-    >
+    <AppShell title="Sleep" subtitle={room ? label : 'Your nights'}>
       {noRoom && (
         <section className="card px-6 py-6">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sleep/15 text-sleep">
@@ -86,8 +87,6 @@ export default function SleepPage() {
 
       {room && (
         <div className="space-y-4">
-          <RoomNow deviceId={room.deviceId} room={live} />
-
           <div className="flex items-center justify-between gap-2 pt-2">
             <button
               type="button"
@@ -123,7 +122,7 @@ export default function SleepPage() {
             </section>
           )}
 
-          {night?.recorded && night.stretch && <Night night={night} />}
+          {night?.recorded && night.stretch && <Night night={night} goal={goal} consistency={consistency} />}
 
           {nights && nights.some((n) => n.recorded) && (
             <section className="card px-6 py-6">
@@ -142,93 +141,63 @@ export default function SleepPage() {
   );
 }
 
-function Night({ night }: { night: NightSummary }) {
+function Night({
+  night,
+  goal,
+  consistency,
+}: {
+  night: NightSummary;
+  goal: number;
+  consistency: 'Good' | 'Fair' | 'Irregular' | null;
+}) {
   const stretch = night.stretch!;
-  const { light } = night;
-  const sources = Object.entries(light.changes.bySource).filter(([, n]) => n > 0);
+  const progress = sleepGoalProgress(Math.round(night.inRoomMs / 60_000), goal);
+  const badgeTone = progress.badge === 'Good' ? 'good' : progress.badge === 'Fair' ? 'warn' : 'bad';
 
   return (
     <>
       <section className="card px-6 py-6">
-        <div className="flex items-center gap-2 text-muted">
-          <MoonIcon className="h-5 w-5 text-sleep" />
-          <span className="font-medium">In the room</span>
-        </div>
-        <p className="tabular mt-2 text-5xl font-bold leading-none">{fmtDuration(night.inRoomMs)}</p>
-        <p className="mt-2 text-sm text-muted">
-          {fmtClock(stretch.start)} to {fmtClock(stretch.end)} ·{' '}
-          {night.emptiedCount === 0
-            ? 'the room never emptied'
-            : `the room emptied ${night.emptiedCount === 1 ? 'once' : `${night.emptiedCount} times`}`}
-        </p>
-        <div className="mt-6">
-          <NightStrips night={night} />
-        </div>
-        {night.coverage < 0.9 && (
-          <p className="mt-4 rounded-2xl bg-canvas px-4 py-3 text-sm text-muted">
-            The room unit was not reporting for {fmtDuration(night.inRoomMs * (1 - night.coverage))}{' '}
-            of this night. Those stretches are hatched and left out, not guessed.
-          </p>
-        )}
+        <Ring
+          value={progress.fraction}
+          tone="good"
+          title="Sleep Duration"
+          label={fmtDuration(night.inRoomMs)}
+          sublabel={`Goal: ${goal}h`}
+          badge={<StatusPill tone={badgeTone} label={progress.badge} />}
+        />
+        <p className="mt-3 text-center text-xs text-muted">Time in the room, from the radar. It cannot tell sleep from lying awake.</p>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
-        <MetricTile
-          label="Longest undisturbed"
-          value={fmtDuration(night.longestStretchMs)}
-          color={SLEEP}
-          icon={<RadarIcon className="h-5 w-5" />}
-          note="Without the room emptying"
-        />
-        <MetricTile
-          label="Light changes"
-          value={String(light.changes.total)}
-          color={LIGHT}
-          icon={<BulbIcon className="h-5 w-5" />}
-          note={
-            sources.length === 0
-              ? 'It stayed the same all night'
-              : sources.map(([s, n]) => `${n} ${SOURCE_LABEL[s] ?? s}`).join(' · ')
-          }
-        />
-        <MetricTile
-          label="Consistency"
-          value={`${Math.round((light.consistency?.share ?? 0) * 100)}%`}
-          color={LIGHT}
-          icon={<SparkIcon className="h-5 w-5" />}
-          note={
-            light.consistency
-              ? `${GROUP_META[light.consistency.group].label.toLowerCase()}`
-              : undefined
-          }
-        />
-        <MetricTile
-          label="Cool and blue light"
-          value={light.coolOrBlueMs === 0 ? 'None' : fmtDuration(light.coolOrBlueMs)}
-          color="#6C7BFF"
-          icon={<BulbIcon className="h-5 w-5" />}
-          note={light.coolOrBlueMs === 0 ? 'None this night' : 'Cool white or blue, this night'}
+        <StatTile icon={<MoonIcon className="h-5 w-5" />} tone="sleep" label="Sleep Start" value={fmtClock(stretch.start)} />
+        <StatTile icon={<MoonIcon className="h-5 w-5" />} tone="skin" label="Sleep End" value={fmtClock(stretch.end)} />
+        <StatTile icon={<MoonIcon className="h-5 w-5" />} tone="good" label="Sleep Consistency" value={consistency ?? '--'} status={consistency ? 'Last two weeks' : 'Needs 3 nights'} statusTone="muted" />
+        <StatTile
+          icon={<ExitIcon className="h-5 w-5" />}
+          tone="heart"
+          label="Bed Exits"
+          value={night.emptiedCount === 0 ? 'None' : `${night.emptiedCount} ${night.emptiedCount === 1 ? 'time' : 'times'}`}
         />
       </div>
 
-      <section className="card px-6 py-6">
-        <h2 className="text-lg font-semibold">Light through the night</h2>
-        <p className="mt-1 text-sm text-muted">
-          {light.onWhilePresentMs > 0
-            ? `On for ${fmtDuration(light.onWhilePresentMs)} while someone was in the room, at ${light.avgBrightness}% on average.`
+      <SectionCard title="Sleep Timeline">
+        <NightStrips night={night} />
+        {night.coverage < 0.9 && (
+          <p className="mt-4 rounded-2xl bg-canvas px-4 py-3 text-sm text-muted">
+            The room unit was not reporting for {fmtDuration(night.inRoomMs * (1 - night.coverage))} of this night. Those
+            stretches are hatched and left out, not guessed.
+          </p>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Light through the night">
+        <p className="-mt-2 mb-4 text-sm text-muted">
+          {night.light.onWhilePresentMs > 0
+            ? `On for ${fmtDuration(night.light.onWhilePresentMs)} while someone was in the room, at ${night.light.avgBrightness}% on average.`
             : 'Off the whole time someone was in the room.'}
         </p>
-        <div className="mt-5">
-          <LightMix night={night} />
-        </div>
-      </section>
+        <LightMix night={night} />
+      </SectionCard>
     </>
   );
 }
-
-const SOURCE_LABEL: Record<string, string> = {
-  auto: 'by the radar',
-  app: 'from the app',
-  serial: 'from the computer',
-  external: 'from Smart Life',
-};
