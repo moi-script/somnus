@@ -13,7 +13,6 @@ import {
   ChevronIcon,
   HelpIcon,
   LinkIcon,
-  MailIcon,
   PaletteIcon,
   TargetIcon,
 } from '@/components/Icons';
@@ -182,14 +181,6 @@ export default function MePage() {
             </dl>
           )}
 
-          <a
-            className="row border-t border-line"
-            href="mailto:nugalmoises62@gmail.com?subject=Somnus%20feedback"
-          >
-            <MailIcon className="h-5 w-5 text-muted" />
-            <span className="flex-1 font-medium">Send feedback</span>
-            <ChevronIcon className="h-5 w-5 text-muted" />
-          </a>
         </section>
 
         <Link href="/download/" className="card row rounded-card">
