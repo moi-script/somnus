@@ -29,7 +29,7 @@ export type BleStatus =
 
 type BleClientModule = typeof import('@capacitor-community/bluetooth-le');
 
-async function ble(): Promise<BleClientModule['BleClient']> {
+export async function loadBleClient(): Promise<BleClientModule['BleClient']> {
   const mod = await import('@capacitor-community/bluetooth-le');
   return mod.BleClient;
 }
@@ -39,20 +39,39 @@ async function ble(): Promise<BleClientModule['BleClient']> {
  * 12+: BLUETOOTH_SCAN needs a runtime grant, and without it scanning returns
  * an empty list rather than an error. Initialising up front turns that silent
  * emptiness into a message someone can act on.
+ *
+ * With Bluetooth off, Android's own "turn on Bluetooth?" prompt is shown
+ * instead of an error; Android does not let an app switch it on silently.
+ * Resolves true once Bluetooth is on.
  */
-export async function initialize(): Promise<void> {
-  const BleClient = await ble();
+export async function ensureEnabled(): Promise<boolean> {
+  const BleClient = await loadBleClient();
   await BleClient.initialize({ androidNeverForLocation: true });
+  if (await BleClient.isEnabled()) return true;
+  try {
+    await BleClient.requestEnable();
+  } catch {
+    return false; // the user tapped Deny
+  }
+  return BleClient.isEnabled();
 }
 
-export async function isEnabled(): Promise<boolean> {
-  const BleClient = await ble();
-  return BleClient.isEnabled();
+/** Android leaves the MTU at 23 unless the central asks. */
+export async function negotiateMtu(deviceId: string): Promise<void> {
+  const BleClient = await loadBleClient();
+  try {
+    const withMtu = BleClient as unknown as {
+      requestMtu?: (id: string, mtu: number) => Promise<number>;
+    };
+    await withMtu.requestMtu?.(deviceId, DESIRED_MTU);
+  } catch {
+    // Negotiation failed; chunked lines still arrive, just in more packets.
+  }
 }
 
 /** Opens Android's own picker, filtered to nodes advertising our service. */
 export async function requestDevice(): Promise<ScannedDevice> {
-  const BleClient = await ble();
+  const BleClient = await loadBleClient();
   const device = await BleClient.requestDevice({ services: [NUS_SERVICE] });
   return { deviceId: device.deviceId, name: device.name ?? 'Unnamed node' };
 }
@@ -68,20 +87,13 @@ export async function connect(
   onFrame: (frame: Frame) => void,
   onDisconnect: () => void,
 ): Promise<Connection> {
-  const BleClient = await ble();
+  const BleClient = await loadBleClient();
 
   await BleClient.connect(deviceId, () => onDisconnect());
 
-  // Android leaves the MTU at 23 unless the central asks. Not every device
-  // honours the request, which is why the parser below reassembles anyway.
-  try {
-    const withMtu = BleClient as unknown as {
-      requestMtu?: (id: string, mtu: number) => Promise<number>;
-    };
-    await withMtu.requestMtu?.(deviceId, DESIRED_MTU);
-  } catch {
-    // Negotiation failed; chunked frames still arrive, just in more packets.
-  }
+  // Not every device honours the request, which is why the parser below
+  // reassembles anyway.
+  await negotiateMtu(deviceId);
 
   const decoder = new TextDecoder();
   const parser = new FrameLineParser();

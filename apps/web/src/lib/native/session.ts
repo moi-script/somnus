@@ -61,9 +61,10 @@ export async function pair(typedToken: string): Promise<void> {
     }
     setDeviceToken(token);
 
-    await ble.initialize();
-    if (!(await ble.isEnabled())) {
-      set({ status: { state: 'error', message: 'Bluetooth is off. Turn it on and try again.' } });
+    if (!(await ble.ensureEnabled())) {
+      set({
+        status: { state: 'error', message: 'Bluetooth is needed to connect. Tap Connect to try again.' },
+      });
       return;
     }
 
