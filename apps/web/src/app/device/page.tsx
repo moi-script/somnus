@@ -276,6 +276,15 @@ export default function DevicePage() {
           </section>
         )}
 
+        <Link href="/device/room-setup/" className="card row rounded-card">
+          <RadarIcon className="h-5 w-5 text-sleep" />
+          <span className="flex-1">
+            <span className="block font-medium">Set up the room unit over Bluetooth</span>
+            <span className="block text-sm text-muted">Pick its Wi-Fi in the app. No keys to copy.</span>
+          </span>
+          <ChevronIcon className="h-5 w-5 text-muted" />
+        </Link>
+
         <section className="card px-6 py-6">
           <h2 className="text-lg font-semibold">Add a band or room unit</h2>
           <p className="mt-1 text-muted">
@@ -301,7 +310,7 @@ export default function DevicePage() {
               <p className="font-medium">Key for {claimed.id}</p>
               <p className="mt-1 text-sm text-muted">
                 {claimed.id.startsWith('room-')
-                  ? 'Shown once. Put it in the room unit’s secrets.h as API_DEVICE_TOKEN, then flash it again.'
+                  ? 'Shown once. Easier: use “Set up the room unit over Bluetooth” above, which sends the key for you. By hand: put it in secrets.h as API_DEVICE_TOKEN and flash again.'
                   : 'Shown once. The phone app keeps it for you. For the USB bridge, put it in .env as BRIDGE_DEVICE_TOKEN.'}
               </p>
               <code className="mt-3 block break-all rounded-xl bg-card px-3 py-2 text-sm">
